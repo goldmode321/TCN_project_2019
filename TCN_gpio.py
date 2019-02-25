@@ -10,7 +10,7 @@ class STM32_power(object):
         gpio.setmode(gpio.BCM) 
         # Each time we setup a gpio pin , it will show warning . This disable the waring mechanism
         gpio.setwarnings(False) 
-        gpio.setup(self,gpio.OUT)
+        gpio.setup(self.pin,gpio.OUT)
 
     def on(self): 
         gpio.output(self.pin,gpio.HIGH)
@@ -21,3 +21,22 @@ class STM32_power(object):
         gpio.output(self.pin,gpio.LOW)
         print("STM32 power off")
 
+class led_yellow(object):
+    '''Class for turn on led (pin 17) '''
+
+    def __init__(self, pin = 17):
+        self.pin = pin
+        # The input can be BOARD and BCM , refer to definded pin number 
+        gpio.setmode(gpio.BCM) 
+        # Each time we setup a gpio pin , it will show warning . This disable the waring mechanism
+        gpio.setwarnings(False) 
+        gpio.setup(self.pin,gpio.OUT)    
+
+    def on(self): 
+        gpio.output(self.pin,gpio.HIGH)
+
+    def off(self):
+        gpio.output(self.pin,gpio.LOW)
+
+
+     

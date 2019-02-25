@@ -17,18 +17,22 @@ class STM32_command(object):
     # baudrate = 115200
 
 
-    def __init__(self, USB_port_path = "/dev/ttyUSB",AUTO_DETECT_PORT = True, USB_port_num = 0, baudrate = 115200):
+    def __init__(self, USB_port_path = "/dev/ttyUSB",AUTO_DETECT_PORT = True, USB_port_num = 0, baudrate = 115200, timeout =1):
 
         # Initial parameters 
         self.USB_port_num = USB_port_num
-        self.USB_port_path = USB_port_path + str(self.USB_port_num)
+        self.USB_port_path = USB_port_path
+        self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
         self.baudrate = baudrate
+        self.timeout = timeout
+
+        # Initial process
         self.STM32_power = STM32_power()
         self.STM32_power.on()
         if AUTO_DETECT_PORT:
             self.auto_detect_port()
         else:
-            self.ser = serial.Serial(self.USB_port_path, self.baudrate)
+            self.ser = serial.Serial(self.USB_port_PATH, self.baudrate,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
 
 
 
@@ -42,15 +46,16 @@ class STM32_command(object):
                 # It is very rare that port ID is more than 10
                 # Thus cut searching when ID is too much.
                 if self.USB_port_num > 10:
-                    print('Can not find correct port, Please check STM32 connection or STM32 protocol !! \n')
+                    print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
                     self.STM32_power.off()
                     sys.exit(0)
                 
                 # Setup communication with serial port
                 # If port not found, trigger IOError
                 # If found, test protocol.
-                self.ser = serial.Serial(self.USB_port_path, self.baudrate)
-                data = self.ser.read(12)
+                print('Connect to'+str(self.USB_port_PATH))
+                self.ser = serial.Serial(self.USB_port_PATH, self.baudrate,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
+                data = bytearray(self.ser.read(12))
                 
                 # Test protocol
                 # Start byte of serial output of STM32 is 0xff, 0xfe,....... 
@@ -63,16 +68,27 @@ class STM32_command(object):
 
         except IOError:
             # If not found, scan next port and reload this function
+            print('port not found :'+ self.USB_port_PATH)
             self.USB_port_num = self.USB_port_num + 1
+            self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
+            self.auto_detect_port()
+        
+        except IndexError:
+            # If time out, if may happens that missing array index
+            print('IndexError : data missing , scanning next port')
+            self.USB_port_num = self.USB_port_num + 1
+            self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
             self.auto_detect_port()
 
-    def move(self, car):
-        ''' car : [x ,y ,z, mode ]'''
+    def move(self, car = [0,0,0,1]):
+        ''' car = [x ,y ,z, mode ] , mode = 0 position mode ; mode = 1 velocity mode '''
         car = limit_maximum_value(car)
         dir_byte = reverse_or_not(car)
         coords = change_to_hex(car)
         self.ser.write([0xFF,0xFE, car[3], coords[0] , coords[1] , coords[2] , coords[3] , coords[4] , coords[5] , dir_byte , coords[6] , coords[7] ])
         
+################################################################################
+################################################################################
 ################################################################################
 
 def change_to_hex(car):
