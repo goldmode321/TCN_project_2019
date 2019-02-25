@@ -1,4 +1,8 @@
-
+######
+###### Example #####
+# from TCN_STM32_protocol import STM32_command
+# STM = STM32_command()
+# STM.move([0,5,0])
 
 
 import serial
@@ -80,13 +84,27 @@ class STM32_command(object):
             self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
             self.auto_detect_port()
 
-    def move(self, car = [0,0,0,1]):
-        ''' car = [x ,y ,z, mode ] , mode = 0 position mode ; mode = 1 velocity mode '''
+    def move(self, car = [0,0,0]):
+        ''' move car ,car = [x ,y ,z, mode ] , mode = 0 position mode ; mode = 1 velocity mode '''
         car = limit_maximum_value(car)
         dir_byte = reverse_or_not(car)
         coords = change_to_hex(car)
-        self.ser.write([0xFF,0xFE, car[3], coords[0] , coords[1] , coords[2] , coords[3] , coords[4] , coords[5] , dir_byte , coords[6] , coords[7] ])
-        
+        self.ser.write([0xFF,0xFE, 1, coords[0] , coords[1] , coords[2] , coords[3] , coords[4] , coords[5] , dir_byte , coords[6] , coords[7] ])
+
+    def stop(self):
+        '''stop motor'''
+        self.ser.write([0xFF,0xFE, 1, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ])
+
+    def off(self):
+        '''just turn off the power of STM32 '''
+        self.STM32_power.off()
+        print('shutdown STM32')
+
+    def on(self):
+        '''just turn on the power of STM32 '''
+        self.STM32_power.on()
+        print('Turn on STM32')
+
 ################################################################################
 ################################################################################
 ################################################################################
