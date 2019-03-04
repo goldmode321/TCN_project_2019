@@ -8,7 +8,6 @@ def xbox_main():
     try:
         joy = xbox.Joystick()
     except Exception as e:
-        joy = xbox.Joystick()
         print(e)
 
     step = 0
@@ -27,7 +26,7 @@ def xbox_main():
             z = int(step*round(joy.rightX(),2)) 
             print([x,y,z],step)
             xbox_client.send_list([x,y,z])
-            time.sleep(0.1)
+            time.sleep(0.006)
         except Exception as e:
             xbox_client.close()
             joy.close()

@@ -2,8 +2,8 @@ import socket
 import time
 import sys
 import pickle
-import struct
-from multiprocessing.connection import Listener, Client
+#import struct
+#from multiprocessing.connection import Listener, Client
 
 
 class UDP_server(object):
@@ -91,7 +91,11 @@ class UDP_server(object):
             #    length = struct.pack('!I', len(packet))
             #    packet = packet + length
             #    self.sock.sendto(packet , (ip,port) )
-            self.sock.sendto(pickle.dumps(list) , (ip,port) )
+            if port != self.port or ip != self.ip:
+                self.sock.sendto(pickle.dumps(list) , (ip,port) )
+            else:
+                self.sock.sendto(pickle.dumps(list) , (self.ip, self.port) )
+                
         except Exception as e:
             self.sock.close()
             print(e)
