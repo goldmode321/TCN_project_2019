@@ -37,7 +37,7 @@ class STM32_command(object):
             self.auto_detect_port()
         else:
             self.ser = serial.Serial(self.USB_port_PATH, self.baudrate,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
-
+        self.ser.write([0xFF,0xFE, 1, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ])
 
 
     def auto_detect_port(self):
