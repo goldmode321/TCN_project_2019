@@ -3,6 +3,7 @@
 # from TCN_STM32_protocol import STM32_command
 # STM = STM32_command()
 # STM.move([0,5,0])
+#
 
 
 import serial
@@ -12,7 +13,7 @@ from TCN_gpio import STM32_power
 
 
 class STM32_command(object):
-    """ class for communicate with STM32 on Raspberry PI 3 """
+    """ class only use for communicate with STM32 on Raspberry PI 3 """
     
     # Parameters below can be used for entirly control whole function
     # AUTO_DETECT_PORT = True
@@ -22,13 +23,14 @@ class STM32_command(object):
 
 
     def __init__(self, USB_port_path = "/dev/ttyUSB",AUTO_DETECT_PORT = True, USB_port_num = 0, baudrate = 115200, timeout =1):
-
+        '''When "STM32_command" is called, this function automatically run'''
         # Initial parameters 
-        self.USB_port_num = USB_port_num
-        self.USB_port_path = USB_port_path
-        self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
-        self.baudrate = baudrate
-        self.timeout = timeout
+        self.USB_port_num = USB_port_num # Initial port to scan (0)
+        self.USB_port_path = USB_port_path # Default raspbian tty path is "/dev/ttyUSB"
+        self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num) # Full path for scanning USB
+        
+        self.baudrate = baudrate # Baudrate for STM32 is 115200. If STM32 configuration changed, this should be change,too
+        self.timeout = timeout # How long to wait for USB responses.
 
         # Initial process
         self.STM32_power = STM32_power()
@@ -40,15 +42,16 @@ class STM32_command(object):
         self.ser.write([0xFF,0xFE, 1, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ])
 
 
+
     def auto_detect_port(self):
-        
-        find_ser = True
+        '''Find which port binds to STM32'''
+        find_ser = True # This flag determine if the system scan port or not
 
         try:
             while find_ser:
                 
                 # It is very rare that port ID is more than 10
-                # Thus cut searching when ID is too much.
+                # Thus cut searching when ID is too much. (Time save)
                 if self.USB_port_num > 10:
                     print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
                     self.STM32_power.off()
@@ -78,7 +81,7 @@ class STM32_command(object):
             self.auto_detect_port()
         
         except IndexError:
-            # If time out, if may happens that missing array index
+            # If time out, it may happens that missing array index
             print('IndexError : data missing , scanning next port')
             self.USB_port_num = self.USB_port_num + 1
             self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
@@ -162,3 +165,5 @@ def reverse_or_not(car):
     return direction_byte
 
 
+if __name__ == "__main__":
+    stmc = STM32_command()
