@@ -2,9 +2,10 @@ import TCN_socket
 import time
 
 
-gui_server = TCN_socket.UDP_server(50000)
+commander_server = TCN_socket.UDP_server(50000)
 stm_server = TCN_socket.UDP_server(50001)
 xbox_server = TCN_socket.UDP_server(50002)
+
 
 
 while True:

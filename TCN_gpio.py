@@ -24,13 +24,14 @@ class STM32_power(object):
         gpio.output(self.pin_power,gpio.HIGH)
         print('Turnning on STM32, please wait 2 second')
         time.sleep(2) # 2 second is for turn on process for STM32
+        return gpio.input(self.pin_check)
         
 
     def off(self):
         gpio.output(self.pin_power,gpio.LOW)
         print("STM32 power off, please wait 0.5 second")
         time.sleep(0.5) # Make sure the Relay is off
-        print(gpio.input(self.pin_check))
+        return gpio.input(self.pin_check)
 
 class led(object):
     '''Class for turn on led (pin 17) '''

@@ -69,6 +69,7 @@ class STM32_command(object):
                 if data[0] == 255 and data[1] == 254 : 
                     find_ser = False
                     print("Successfully connect to STM32 controller")
+
                 else:
                     # Scan next port in next loop
                     self.USB_port_num = self.USB_port_num + 1
@@ -165,5 +166,5 @@ def reverse_or_not(car):
     return direction_byte
 
 
-if __name__ == "__main__":
-    stmc = STM32_command()
+# if __name__ == "__main__":
+#     stmc = STM32_command()
