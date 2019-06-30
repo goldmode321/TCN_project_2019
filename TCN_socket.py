@@ -9,7 +9,7 @@ import pickle
 class UDP_server(object):
     ''' Class for socket server '''
 
-    def __init__(self, port = 50000, ip = '127.0.0.1',setblocking = 0):
+    def __init__(self, port = 50000, setblocking = 0,ip = '127.0.0.1'):
         self.port = port
         self.ip = ip
         self.setblocking = setblocking

@@ -34,7 +34,7 @@ class STM32_command(object):
 
         # Initial process
         self.STM32_power = STM32_power()
-        self.STM32_power.on()
+        self.on()
         if AUTO_DETECT_PORT:
             self.auto_detect_port()
         else:
@@ -101,13 +101,15 @@ class STM32_command(object):
 
     def off(self):
         '''just turn off the power of STM32 '''
-        self.STM32_power.off()
-        print('shutdown STM32')
+        print("STM32 power off, please wait 0.5 second")
+        self.pin_check = self.STM32_power.off()
+
 
     def on(self):
         '''just turn on the power of STM32 '''
-        self.STM32_power.on()
-        print('Turn on STM32')
+        print('Turnning on STM32, please wait 2 second')
+        self.pin_check = self.STM32_power.on()
+
 
 ################################################################################
 ################################################################################
