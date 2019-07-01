@@ -1,23 +1,27 @@
 import TCN_socket
 import time
 import subprocess
+import traceback
 
-def initialize():
-    command_client = TCN_socket.UDP_server(50000,1)
+try:
+    command_server = TCN_socket.TCP_server(50000)
     print('Initializing communicaiton bridge')
-    subprocess.Popen('python TCN_bridge.py')
-    connection_test = command_client.recv_string()
+    subprocess.Popen('python TCN_bridge.py',shell = True)
+    connection_test = command_server.recv_string()
     print(connection_test)
     if connection_test == 'C':
         print('Bridge connection established successfully')
-        command_client.send_string('C')
-    
-    command_client.close()
+        command_server.send_string('C')
+        time.sleep(1)
+    connect_test = command_server.recv_string()
+    print(connect_test)
+    time.sleep(1)
+    command_server.close()
+except:
+    command_server.close()
+    traceback.print_exc()
 
 
 
 
 
-
-if __name__ == "__main__":
-    initialize()
