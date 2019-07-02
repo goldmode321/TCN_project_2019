@@ -10,7 +10,7 @@ try:
     commander_client = TCN_socket.TCP_client(50000)
     time.sleep(1)
     commander_client.send_string('C')
-    C_connection_test = commander_client.recv_string()
+    C_connection_test = commander_client.recv_string(1)
     print(C_connection_test)
     if C_connection_test == 'C':
         print('close')
