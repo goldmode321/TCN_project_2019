@@ -80,9 +80,9 @@ class UDP_server(object):
                 self.sock.sendto(message.encode('utf-8') ,(self.ip ,self.port) ) # Send message ( I forgot what's the return value of sendto() )
             else:
                 self.sock.sendto(message.encode('utf-8') , (ip,port) )
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
+            traceback.print_exc()
 
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
@@ -97,9 +97,9 @@ class UDP_server(object):
             else:
                 self.sock.sendto(pickle.dumps(list) , (self.ip, self.port) )
                 
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
+            traceback.print_exc()
 
     def close(self):
         ''' Close server '''
@@ -115,10 +115,10 @@ class UDP_client(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.setblocking(setblocking)
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
-            print('socket client fail initialize')
+            traceback.print_exc()
+            print('\nsocket client fail initialize')
     
     def recv_string(self, length = 11):
         try:
@@ -130,12 +130,11 @@ class UDP_client(object):
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
             sys.exit(-0) # Exit program
-        except socket.error as e:
-            print(e)
+        except socket.error:
             pass
-        except Exception as e:
-            print(e)
+        except:
             self.sock.close()
+            traceback.print_exc()
 
     def recv_list(self, length = 4096):
         try:
@@ -150,9 +149,9 @@ class UDP_client(object):
         except socket.error as e:
             print(e)
             pass
-        except Exception as e:
-            print(e)
+        except:
             self.sock.close()
+            traceback.print_exc()
 
     def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
         ''' Send string to target port (default IP is 127.0.0.1)'''
@@ -161,9 +160,9 @@ class UDP_client(object):
                 self.sock.sendto(message.encode('utf-8') ,(self.ip ,self.port) ) # Send message ( I forgot what's the return value of sendto() )
             else:
                 self.sock.sendto(message.encode('utf-8') , (ip,port) )
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
+            traceback.print_exc()
 
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
@@ -202,7 +201,7 @@ class TCP_server(object):
 
 
 
-        # Create UDP server
+        # Create TCP server
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setblocking(self.setblocking)
@@ -212,10 +211,15 @@ class TCP_server(object):
             self.connection = self.sock.accept()
             print('Client connected')
 
-        except Exception as e:
+        except:
             self.sock.close()
             print('Cancel bind process \n\n')
             traceback.print_exc()
+
+    def blocking(self, setblocking=True):
+        self.sock.setblocking(setblocking)
+        
+
 
     def recv_string(self, length = 1):
         try:
@@ -229,10 +233,10 @@ class TCP_server(object):
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
             sys.exit(0) # Exit program
-        except socket.error as e:
+        except socket.error:
             #print(e)
             pass
-        except Exception as e:
+        except:
             traceback.print_exc()
             self.sock.close()
 
