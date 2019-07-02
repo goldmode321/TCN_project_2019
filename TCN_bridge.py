@@ -1,13 +1,17 @@
 import TCN_socket
 import time
 import traceback
+<<<<<<< HEAD
 import subprocess
+=======
+>>>>>>> retrest_socket
 import sys
 
 '''Portocol'''
 ''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
 
 try:
+<<<<<<< HEAD
     commander_client = TCN_socket.UDP_client(50000)
     commander_client.send_string('C')
 
@@ -38,10 +42,27 @@ try:
         
 
         
+=======
+    commander_client = TCN_socket.TCP_client(50000)
+    time.sleep(1)
+    commander_client.send_string('C')
+    C_connection_test = commander_client.recv_string(1)
+    print(C_connection_test)
+    if C_connection_test == 'C':
+        print('close')
+        time.sleep(1)
+        commander_client.send_string('C')
+        time.sleep(1)
+        commander_client.close()
+        sys.exit(0)
+
+
+>>>>>>> retrest_socket
 
 except:
     traceback.print_exc()
     commander_client.close()
+<<<<<<< HEAD
     stm32_server.close()
 
 sys.exit()
@@ -53,6 +74,8 @@ sys.exit()
 
 
 
+=======
+>>>>>>> retrest_socket
 
 
 class bridge_portocol(object):
