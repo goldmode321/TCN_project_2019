@@ -1,17 +1,13 @@
 import TCN_socket
 import time
 import traceback
-<<<<<<< HEAD
 import subprocess
-=======
->>>>>>> retrest_socket
 import sys
 
 '''Portocol'''
 ''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
 
 try:
-<<<<<<< HEAD
     commander_client = TCN_socket.UDP_client(50000)
     commander_client.send_string('C')
 

@@ -1,9 +1,7 @@
 import TCN_socket
 import time
 import subprocess
-import traceback
 
-<<<<<<< HEAD
 def initialize():
     command_server = TCN_socket.UDP_server(50000,1)
     print('Initializing communicaiton bridge')
