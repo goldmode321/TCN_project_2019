@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import TCN_socket
 import time
 import subprocess
@@ -5,23 +6,9 @@ import traceback
 import threading
 
 
-# try:
-#     command_server = TCN_socket.TCP_server(50000)
-#     print('Initializing communicaiton bridge')
-    
-#     connection_test = command_server.recv_string()
-#     print(connection_test)
-#     if connection_test == 'C':
-#         print('Bridge connection established successfully')
-#         command_server.send_string('C')
-#         time.sleep(1)
-#     connect_test = command_server.recv_string()
-#     print(connect_test)
-#     time.sleep(1)
-#     command_server.close()
-# except:
-#     command_server.close()
-#     traceback.print_exc()
+###                                                             ###
+###    Run TCN_bridge.py (so called "Communication center")     ###
+###                                                             ###
 
 try:
     p_bridge = subprocess.Popen('python TCN_bridge.py',shell = True)
@@ -38,6 +25,8 @@ except:
 
     # p_bridge = subprocess.Popen('python TCN_STM32_main.py',shell = True)
     # print('Initializing STM32 motor controller')
+
+
 
 commander_client.send_list(['C',1,2,3])
 time.sleep(1)

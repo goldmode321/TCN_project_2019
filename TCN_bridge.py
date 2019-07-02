@@ -1,3 +1,4 @@
+#!/usr/bin/python3
 import TCN_socket
 import time
 import traceback
