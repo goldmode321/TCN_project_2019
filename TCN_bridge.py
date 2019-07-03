@@ -30,6 +30,8 @@ try:
     stm32_data = stm32_server.recv_list()
     if stm32_data == ['S',1,2,3]:
         print("STM32 communication successfully established !\ncommunication center get : {}".format(stm32_data) )
+        stm32_server.send_list(['S','T','M',3,2])
+        print("Send back ['S','T','M',3,2] for double check")
     else:
         print('Undefined communication error of STM32, please check test message')
         raise KeyboardInterrupt      

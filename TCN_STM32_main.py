@@ -4,17 +4,51 @@ import threading
 import traceback
 import sys
 import time
+import logging
 
+
+'''Initial section of STM32 '''
 
 try:
+    logging.basicConfig(filename='STM32_main.log',level =logging.INFO)
     stm32 = TCN_STM32_protocol.STM32_command()
+    logging.info('Successfully connect to STM32')
     stm32_client = TCN_socket.TCP_client(50001)
+    logging.info('STM32 communication established')
     stm32_client.send_list(['S',1,2,3])
-
+    logging.info("Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received")
+    data_get = stm32_client.recv_list()
+    if data_get == ['S','T','M',3,2]:
+        keep_running = True
+        logging.info("['S','T','M',3,2] received , connection test complete. Program start")
+    else:
+        keep_running = False
+        print('Something wrong for connection check, wrong potorcol')
+        logging.info("Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py")
     
 except:
     traceback.print_exc()
     stm32_client.close()
+
+
+'''Running section '''
+
+while keep_running:
+    try:
+        data_get = stm32_client.recv_list()
+
+        ''' Check data flag '''
+        if data_get[0] == 'S':
+            
+            stm32.move(data_get[1])
+
+    except:
+        stm32_client.close()
+        keep_running = False
+
+
+
+'''Ending section '''
 
 
 stm32_client.close()
