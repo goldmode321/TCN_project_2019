@@ -1,3 +1,4 @@
+'''
 import socket
 import sys
 
@@ -29,3 +30,16 @@ try:
 finally:
     print('closing socket')
     sock.close()
+'''
+class cdf:
+    def c(self):
+        print('c')
+    
+    def d(self, input):
+        print(input)
+    
+    def f(self):
+        print('f')
+
+
+

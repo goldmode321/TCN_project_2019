@@ -13,7 +13,7 @@
 #     end = time.time()
 #     print(end - start)
 
-
+'''
 import socket
 import sys
 import time
@@ -51,3 +51,18 @@ while True:
     except:
         # Clean up the connection
         connection.close()
+'''
+
+import testa
+
+class abc(testa.cdf):
+    
+    def __init__(self):
+        self.c()
+
+
+if __name__ == "__main__":
+    a = abc()
+
+
+

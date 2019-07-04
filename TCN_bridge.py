@@ -42,12 +42,38 @@ except:
 
 
 
+###                                                                   ###
+###    Waiting for command from TCN_main.py                           ###
+###                                                                   ###
+bridge_run = True
+commander_server.send_list(['C',0])
+while bridge_run:
+    try:
+        commander_data = commander_server.recv_list()
+        if commander_data[0] == 'C':
+            if commander_data[1] == 'exit':
+                stm32_server.send_list(['S',commander_data[1]])
+
+                print('All server will be close in 3 second')
+                time.sleep(3)
+                commander_server.close()
+                stm32_server.close()
+                bridge_run = False
+
+        else:
+            print('Wrong potorcol from commander ')
+    except:
+        commander_server.close()
+        stm32_server.close()
+        traceback.print_exc()
+        
+
 
 
 
 # time.sleep(5)
-commander_server.close()
-stm32_server.close()
+# commander_server.close()
+# stm32_server.close()
 
 
 
@@ -60,10 +86,16 @@ stm32_server.close()
 
 
 
-class bridge_portocol(object):
+# class bridge_portocol(object):
 
-    def Command_potorcol(self,command):
-        if type(command) == str:
-            pass
+#     def Command_potorcol(self,command):
+#         if command[0] == 'C':
+#             if command[1] == 'exit':
+#                 stm32_server.send_list['S',command[1]]
+#                 commander_server.close()
+#                 stm32_server.close()
+
+#         else:
+#             print('Wrong potorcol from commander ')
 
 

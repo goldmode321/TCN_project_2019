@@ -10,7 +10,7 @@ import logging
 '''Initial section of STM32 '''
 
 try:
-    logging.basicConfig(filename='STM32_main.log',level =logging.INFO)
+    logging.basicConfig(filename='STM32_main.log',filemode = 'w',level =logging.INFO)
     stm32 = TCN_STM32_protocol.STM32_command()
     logging.info('Successfully connect to STM32')
     stm32_client = TCN_socket.TCP_client(50001)
@@ -39,9 +39,10 @@ while keep_running:
 
         ''' Check data flag '''
         if data_get[0] == 'S':
-            
-            stm32.move(data_get[1])
-
+            if data_get[1] != 'end':
+                stm32.move(data_get[1])
+            elif data_get[1] == 'end':
+                keep_running = False
     except:
         stm32_client.close()
         keep_running = False

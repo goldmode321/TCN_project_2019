@@ -7,6 +7,23 @@ import threading
 
 
 ###                                                                   ###
+###    Preview function                                               ###
+###                                                                   ###
+
+def help_menu():
+    print(" exit : Quit software ")
+
+
+
+
+
+
+
+
+
+
+
+###                                                                   ###
 ###    Run TCN_bridge.py (so called "Communication center (CC) ")     ###
 ###                                                                   ###
 
@@ -23,6 +40,12 @@ try:
     process_bridge = subprocess.Popen('python3 TCN_STM32_main.py',shell = True)
 
     
+    commander_receive = commander_client.recv_list()
+    if commander_receive == (['C',0]):
+        commander_run = True
+        
+
+
 except:
     commander_client.close()
     traceback.print_exc()
@@ -35,9 +58,30 @@ except:
     # print('Initializing STM32 motor controller')
 
 
+###                                                                   ###
+###     Waiting for User Command                                      ###
+###                                                                   ###
+
+print('Program is all set, now is ready to run')
+
+while commander_run:
+    command = input('Please enter command (Enter "h" for help menu)')
+    if command == 'h':
+        help_menu()
+
+    elif command == 'exit':
+        commander_client.send_list(['C',command])
+        commander_run = False
+    else:
+        commander_client.send_list(['C',command])
+        
+
+
 
 
 commander_client.close()
+time.sleep(6)
+print('All program terminated')
 
 
 
