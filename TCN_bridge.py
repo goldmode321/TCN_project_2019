@@ -4,9 +4,12 @@ import time
 import traceback
 import subprocess
 import sys
+import threading
 
 '''Portocol'''
 ''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
+
+
 
 
 
@@ -45,6 +48,7 @@ except:
 ###                                                                   ###
 ###    Waiting for command from TCN_main.py                           ###
 ###                                                                   ###
+
 bridge_run = True
 commander_server.send_list(['C',0])
 while bridge_run:

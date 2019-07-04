@@ -31,27 +31,44 @@ def init():
         else:
             keep_running = False
             print('Something wrong for connection check, wrong potorcol')
-            logging.info("Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py")
+            logging.info(str(data_get)+" . Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py")
     except:
-        traceback.print_exc()
+        err_msg = traceback.print_exc()
         stm32_client.close()
 
 
-'''Running section '''
 
+'''Portocol function'''
+
+def portocol(data_get):
+    global stm32,stm32_client,keep_running
+    if data_get[0] == 'S':
+        if data_get[1] == 'exit':
+            keep_running = False
+            logging.info(" 'exit' command received, start terminating program")
+        elif data_get[1] == 'move':            
+            stm32.move(data_get[3])
+            logging.info(" 'move' command received, movie with "+str(data_get[2]))
+        elif data_get[1] == 'stop':
+            stm32.move([0,0,0])
+            logging.info(" 'stop' command received, movie with "+[0,0,0])
+    
+    else:
+        print(str(data_get)+" received by STM32. Wrong potorcol ! ")
+        logging.info(str(data_get)+" received by STM32. Wrong potorcol, please check TCN_bridge")
+
+
+
+'''Running section '''
 
 def main():
     global stm32,stm32_client,keep_running
     while keep_running:
         try:
             data_get = stm32_client.recv_list()
+            portocol(data_get)
 
-            ''' Check data flag '''
-            if data_get[0] == 'S':
-                if data_get[1] != 'end':
-                    stm32.move(data_get[1])
-                elif data_get[1] == 'end':
-                    keep_running = False
+
         except:
             stm32_client.close()
             keep_running = False
