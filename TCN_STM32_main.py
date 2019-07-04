@@ -33,7 +33,8 @@ def init():
             print('Something wrong for connection check, wrong potorcol')
             logging.info(str(data_get)+" . Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py")
     except:
-        err_msg = traceback.print_exc()
+        traceback.print_exc()
+        logging.exception("Got error")
         stm32_client.close()
 
 
@@ -80,6 +81,7 @@ def main():
 def end():
     stm32_client.close()
     stm32.off()
+    logging.info('STM32 is off')
 
 if __name__ == "__main__":
     init()
