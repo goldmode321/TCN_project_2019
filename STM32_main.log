@@ -1,0 +1,46 @@
+INFO:root:Successfully connect to STM32
+
+INFO:root:STM32 communication established
+
+INFO:root:Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received
+
+INFO:root:['S','T','M',3,2] received , connection test complete. Program start
+
+INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
+
+INFO:root: 'move' command received, movie with [0, 0, 0]
+
+INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
+
+INFO:root: 'move' command received, movie with [0, 0, 0]
+
+INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
+
+INFO:root: 'move' command received, movie with [0, 0, 0]
+
+INFO:root:Command in : ['S', 'move', [0, 1, 0]] 
+
+INFO:root: 'move' command received, movie with [0, 1, 0]
+
+INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
+
+INFO:root: 'move' command received, movie with [0, 0, 0]
+
+INFO:root:Command in : ['S', 'move', [-1, 0, 0]] 
+
+INFO:root: 'move' command received, movie with [-1, 0, 0]
+
+INFO:root:Command in : ['S', 'move', [-1, 4, 0]] 
+
+INFO:root: 'move' command received, movie with [-1, 4, 0]
+
+INFO:root:Command in : ['S', 'move', [-4, 0, 0]] 
+
+INFO:root: 'move' command received, movie with [-4, 0, 0]
+
+INFO:root:Command in : ['S', 'exit'] 
+
+INFO:root: 'exit' command received, start terminating program
+
+INFO:root:STM32 is off 
+

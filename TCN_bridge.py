@@ -9,11 +9,18 @@ import threading
 '''Portocol'''
 ''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
 
-'''Initialize'''
+###                                                                   ###
+###    global variables                                               ###
+###                                                                   ###
 commander_server = None
 stm32_server = None
 bridge_run = True
 
+
+
+###                                                                   ###
+###    Gateway for commander communication. See TCN_main.py           ###
+###                                                                   ###
 def commander_init():
     global commander_server
     try:
@@ -28,6 +35,12 @@ def commander_init():
         commander_server.close()
         traceback.print_exc()
         print('Communication center fail at commander ')
+        sys.exit(0)
+
+
+###                                                                   ###
+###    Gateway for STM32 communication. See TCN_STM32_main.py         ###
+###                                                                   ###
 
 def stm32_init():
     global stm32_server
@@ -45,29 +58,56 @@ def stm32_init():
         stm32_server.close()
         traceback.print_exc()
         print('Communication center fail at STM32 ')
+        sys.exit(0)
 
 
 ###                                                                   ###
-###    Portocol                                                       ###
+###    Portocol for bridge                                            ###
 ###                                                                   ###
-def bridge_potorcol(commander_data):
+
+'''
+[ 'C' , 'exit '] received
+    ['S', 'exit' ] send to STM
+
+[ 'C' , 'xbox' , [x,y,z] ] 
+    ['S' ,'move', [x,y,z]]
+
+
+
+
+
+'''
+
+def bridge_potorcol(receive_data):
     global commander_server,stm32_server,bridge_run
     '''First, get commander command (TCN_main.py)'''
     try:
-        commander_data = commander_server.recv_list()
-        if commander_data[0] == 'C':
-            if commander_data[1] == 'exit':
-                stm32_server.send_list(['S',commander_data[1]])
+        if receive_data[0] == 'C':
+            if receive_data[1] == 'exit':
+                stm32_server.send_list(['S','exit'])
                 print('All server will be close in 3 second')
                 time.sleep(3)
                 commander_server.close()
                 stm32_server.close()
                 bridge_run = False
-            elif commander_data[1] == 'move':
-                stm32_server.send_list(['S','move',[ commander_data[2],commander_data[3],commander_data[4] ] ])
+            # elif commander_data[1] == 'key_move':
+            #     stm32_server.send_list(['S','move',[ commander_data[2],commander_data[3],commander_data[4] ] ])
+            
+            elif receive_data[1] == 'mwx':
+                stm32_server.send_list(['S','move',receive_data[2]])
+                receive_data = stm32_server.recv_list()
+                bridge_potorcol(receive_data)
+                commander_server.send_list(['C','next'])
 
+            elif receive_data[1] == 'stop_motor':
+                stm32_server.send_list(['S','stop'])
+
+        elif receive_data[0] == 'S':
+            if receive_data[1] == 'next':
+                pass
+        
         else:
-            print('Wrong potorcol from commander ')
+            print('{} received . Wrong potorcol from commander !'.format(receive_data))
 
     except:
         commander_server.close()
@@ -83,7 +123,7 @@ def bridge_potorcol(commander_data):
 ###    Waiting for command from TCN_main.py                           ###
 ###                                                                   ###
 def main():
-    bridge_run = True
+    global commander_server,stm32_server,bridge_run
     commander_server.send_list(['C',0])
     while bridge_run:
         try:

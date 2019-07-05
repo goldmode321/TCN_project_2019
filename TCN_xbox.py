@@ -1,23 +1,66 @@
 import xbox
-import TCN_socket
 import time
+import traceback
 
 
 
-class xbox_controller():
+class xbox_controller(object):
     
     def __init__(self):
         try:
+            self.step = 0
             self.joy = xbox.Joystick()
         except IOError:
             print('Xbox connect error, auto retry again.')
             self.__init__()
-        except Exception as e:
-            print(e)
+        except:
+            traceback.print_exc()
         
-        self.xbox_client = TCN_socket.UDP_client(50002)
+    def xbox_control(self):
+
+        # Key A means accelerate
+        if int(self.joy.A()) and self.step <= 131:
+            self.step = self.step + 1
+            print(self.step)
+            time.sleep(0.05)
+        # Key B means deaccelerate
+        if int(self.joy.B()) and self.step > 0:
+            self.step = self.step - 1
+            print(self.step)
+            time.sleep(0.05)
+        
+        x = int(self.step*round(self.joy.leftX(),2)) 
+        y = int(self.step*round(self.joy.leftY(),2))
+        z = int(self.step*round(self.joy.rightX(),2))
+        
+        return [x,y,z]
+
+    def xbox_test(self):
+        while not self.joy.Back(): # When key "back" is pushed, Back() return True.
+            try:
+                # Key A means accelerate
+                if int(self.joy.A()) and self.step <= 131:
+                    self.step = self.step + 1
+                    print(self.step)
+                    time.sleep(0.05)
+                # Key B means deaccelerate
+                if int(self.joy.B()) and self.step > 0:
+                    self.step = self.step - 1
+                    print(self.step)
+                    time.sleep(0.05)
+                
+                x = int(self.step*round(self.joy.leftX(),2)) 
+                y = int(self.step*round(self.joy.leftY(),2))
+                z = int(self.step*round(self.joy.rightX(),2)) 
+                print([x,y,z],self.step)
+                time.sleep(0.006)
+            except:
+                self.joy.close()
+                traceback.print_exc()
 
 
+
+'''
 def xbox_main():
     
     try:
@@ -53,7 +96,8 @@ def xbox_main():
             xbox_client.close()
             joy.close()
             print(e)
-
+'''
 
 if __name__ == "__main__":
-    xbox_main()    
+    pass
+    # xbox_main()    
