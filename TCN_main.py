@@ -62,7 +62,10 @@ def commander_init():
         commander_receive = commander_client.recv_list()
         commander_portocol(commander_receive) # Waiting for [ 'C' , 'next' ]
 
-        
+        print('\n\n##### Initializing Vision module #####')
+        process_stm32 = subprocess.Popen('python3 TCN_vision_main.py',shell = True)
+        commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
+        commander_portocol(commander_receive)
 
 
         print('\n\n##### Initializing STM32 #####')

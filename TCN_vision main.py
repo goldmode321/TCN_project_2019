@@ -11,38 +11,67 @@ import math
 import traceback
 import logging
 
+# Initial parameters
+vision_module = None
+vision_client = None
+vision_run = False
+
 def init():
-    logging.basicConfig(filename='Vision_main.log',filemode = 'w',level =logging.INFO)
-    proxy =  xmlrpclib.ServerProxy("http://192.168.5.100:8080") 
-    if proxy.alive() == [0,'Alive']:
-        logging.info('Connection to Vision module establiished')
+    global vision_module , vision_client , vision_run
+    try:
+        logging.basicConfig(filename='Vision_main.log',filemode = 'w',level =logging.INFO)
+        vision_module =  xmlrpclib.ServerProxy("http://192.168.5.100:8080") 
+        if vision_module.alive() == [0,'Alive']:
+            logging.info('Connection to Vision module establiished , Vision module status : {}\n'.format(vision_module.alive()))
+            vision_client = TCN_socket.TCP_client(50001)
+            vision_client.send_list(['V','status','Alive'])
+            vision_run = True
+        else:
+            logging.info('Vision module is not Alive\n')
+            raise KeyboardInterrupt
+    except:
+        vision_client.close()
+        traceback.print_exc()
+        logging.exception('Got error : ')
+        sys.exit(0)
+
+        
+
+def vision_portocol(vision_receive):
+    global vision_module , vision_client , vision_run
+    if vision_receive[0] == 'V':
+        if vision_receive[1] == 'exit':
+            vision_run = False
+            logging.info(" 'exit' command received, start terminating program\n")
+
+    
+    else:
+        print(str(vision_receive)+" received by vision module. Wrong potorcol ! ")
+
 
 
 
 
 def main():
+    global vision_module , vision_client , vision_run
+    while vision_run:
+        try:
+            vision_receive = vision_client.recv_list()
+            logging.info('Command in : {} \n'.format(vision_receive))
+            vision_portocol(vision_receive)
+        except:
+            traceback.print_exc()
+            vision_run = False
+            logging.exception('Got error : \n')
 
-    global proxy
+def end():
+    global vision_client
+    vision_client.close()
+    logging.info(" Vision module is off \n")
 
-    try:
-        proxy =  xmlrpclib.ServerProxy("http://192.168.5.100:8080") 
-        alive_resp = proxy.alive() #check rpc sever is up
-        print(alive_resp)
-        tcng.init()
 
-    except xmlrpclib.Fault as err:
-        print("A fault occurred")
-        print(err.faultCode)
-        print(err.faultString)
-        return 1
 
-    except:
-        print("# Server is not alive")
-        print("")
-        return 1
 
-    manual_mode(proxy)
-    #manual_mode(proxy,joy)
 
 
 def manual_mode(proxy):
@@ -205,5 +234,7 @@ def help_manual():
     return
 
 if __name__ == "__main__":
+    init()
     main()
+    end()
 

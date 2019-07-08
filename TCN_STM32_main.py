@@ -20,7 +20,7 @@ def init():
         logging.basicConfig(filename='STM32_main.log',filemode = 'w',level =logging.INFO)
         stm32 = TCN_STM32_protocol.STM32_command()
         logging.info('Successfully connect to STM32\n')
-        stm32_client = TCN_socket.TCP_client(50001)
+        stm32_client = TCN_socket.TCP_client(50003)
         logging.info('STM32 communication established\n')
         stm32_client.send_list(['S',1,2,3])
         logging.info("Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received\n")

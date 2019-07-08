@@ -15,8 +15,26 @@ import threading
 commander_server = None
 stm32_server = None
 vision_server = None
-bridge_run = True
+bridge_run = False
 
+
+
+def bridge_init():
+    global commander_server,stm32_server , vision_server , bridge_run
+    try:
+        commander_init()
+        vision_init()
+        stm32_init()
+        bridge_run = True
+    except:
+        if commander_server != None:
+            commander_server.close()
+        if vision_server != None:
+            vision_server.close()
+        if stm32_server != None:
+            stm32_server.close()
+        bridge_run = False
+        sys.exit(0)
 
 
 ###                                                                   ###
@@ -27,16 +45,12 @@ def commander_init():
     try:
         commander_server = TCN_socket.TCP_server(50000,1)
         commander_server.send_list(['C','next'])
-        # if commander_data == ['C',1,2,3]:
-        #     print('Commander communication successfully established ! \ncommunication center get : {}'.format(commander_data))
-        # else:
-        #     print('Undefined communication error of commander, please check test message')
-        #     raise KeyboardInterrupt
+
     except:
         commander_server.close()
         traceback.print_exc()
-        print('Communication center fail at commander ')
-        sys.exit(0)
+        print('Bridge initializing fail at commander_init()')
+        
 
 ###                                                                            ###
 ###    Gateway for Vision module communication. See TCN_vision_main.py         ###
@@ -45,7 +59,7 @@ def commander_init():
 def vision_init():
     global vision_server,commander_server
     try:
-        vision_server = TCN_socket.TCP_server(50002,1)
+        vision_server = TCN_socket.TCP_server(50001,1)
         vision_data = vision_server.recv_list()
         if vision_data == ['V','status','Alive']:
             print("Vision communication successfully established !\ncommunication center get : {}".format(vision_data) )
@@ -54,10 +68,9 @@ def vision_init():
             print('Undefined communication error of Vision module, please check test message')
             raise KeyboardInterrupt      
     except:
-        vision_server.close()
         traceback.print_exc()
-        print('Communication center fail at STM32 ')
-        sys.exit(0)
+        print('Bridge initializing fail at vision_init()')
+
 
 
 
@@ -69,7 +82,7 @@ def vision_init():
 def stm32_init():
     global stm32_server
     try:
-        stm32_server = TCN_socket.TCP_server(50001,1)
+        stm32_server = TCN_socket.TCP_server(50003,1)
         stm32_data = stm32_server.recv_list()
         if stm32_data == ['S',1,2,3]:
             print("STM32 communication successfully established !\ncommunication center get : {}".format(stm32_data) )
@@ -82,8 +95,8 @@ def stm32_init():
     except:
         stm32_server.close()
         traceback.print_exc()
-        print('Communication center fail at STM32 ')
-        sys.exit(0)
+        print('Bridge initializing fail at stm32_init()')
+
 
 
 ###                                                                   ###
@@ -113,12 +126,13 @@ def stm32_init():
 '''
 
 def bridge_potorcol(receive_data):
-    global commander_server,stm32_server,bridge_run
+    global commander_server , stm32_server , vision_server , bridge_run
     '''First, get commander command (TCN_main.py)'''
     try:
         if receive_data[0] == 'C':
             if receive_data[1] == 'exit':
                 stm32_server.send_list(['S','exit'])
+                vision_server.send_list(['V','exit'])
                 print('All server will be close in 3 second')
                 time.sleep(3)
                 commander_server.close()
@@ -146,6 +160,7 @@ def bridge_potorcol(receive_data):
     except:
         commander_server.close()
         stm32_server.close()
+        vision_server.close()
         traceback.print_exc()
 
     
@@ -156,9 +171,9 @@ def bridge_potorcol(receive_data):
 ###                                                                   ###
 ###    Waiting for command from TCN_main.py                           ###
 ###                                                                   ###
-def main():
-    global commander_server,stm32_server,bridge_run
-    # commander_server.send_list(['C',0])
+def bridge_main():
+    global commander_server,stm32_server , vision_server , bridge_run
+
     while bridge_run:
         try:
             commander_data = commander_server.recv_list()
@@ -166,16 +181,23 @@ def main():
 
         except:
             commander_server.close()
+            vision_server.close()
             stm32_server.close()
             traceback.print_exc()
+            bridge_run = False
+
+def end_bridge():
+    commander_server.close()
+    vision_server.close()
+    stm32_server.close()
             
 
 
 
 if __name__ == "__main__":
-    commander_init()
-    stm32_init()
-    main()
+    bridge_init()
+    bridge_main()
+    end_bridge()
 
 
 # time.sleep(5)
