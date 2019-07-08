@@ -35,6 +35,9 @@ class xbox_controller(object):
         
         return [x,y,z]
 
+    def close(self):
+        self.joy.close()
+
     def xbox_test(self):
         while not self.joy.Back(): # When key "back" is pushed, Back() return True.
             try:

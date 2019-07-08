@@ -97,7 +97,7 @@ def commander_init():
 ###     Waiting for User Command                                      ###
 ###                                                                   ###
 def main():
-    global process_bridge, commander_client,commander_run,process_stm32
+    global process_bridge, commander_client , commander_run, process_stm32
     print('\n\n @@@ Program is all set, now is ready to run @@@')
 
     while commander_run:
@@ -130,6 +130,7 @@ def main():
             commander_run = False
             
     commander_client.close()
+    xbox.close()
     time.sleep(6)
     print('All program terminated')
 
