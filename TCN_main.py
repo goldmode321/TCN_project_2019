@@ -59,16 +59,22 @@ def commander_init():
         time.sleep(1)    # Wait some time for assuming Communication center(CC) work  稍微delay，以確保CC正常運作
         print("Establish TCP connection to communication center\nSend test data ['C',1,2,3]")
         commander_client = TCN_socket.TCP_client(50000)
-        commander_client.send_list(['C',1,2,3])
+        commander_receive = commander_client.recv_list()
+        commander_portocol(commander_receive) # Waiting for [ 'C' , 'next' ]
+
+        
 
 
         print('\n\n##### Initializing STM32 #####')
         process_stm32 = subprocess.Popen('python3 TCN_STM32_main.py',shell = True)
+        commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
+        commander_portocol(commander_receive)
 
-        
-        commander_receive = commander_client.recv_list()
-        if commander_receive == (['C',0]):
-            commander_run = True
+
+
+        commander_run = True
+        # if commander_receive == (['C',0]):
+        #     commander_run = True
             
 
 

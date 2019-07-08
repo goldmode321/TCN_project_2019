@@ -14,6 +14,7 @@ import threading
 ###                                                                   ###
 commander_server = None
 stm32_server = None
+vision_server = None
 bridge_run = True
 
 
@@ -25,17 +26,40 @@ def commander_init():
     global commander_server
     try:
         commander_server = TCN_socket.TCP_server(50000,1)
-        commander_data = commander_server.recv_list()
-        if commander_data == ['C',1,2,3]:
-            print('Commander communication successfully established ! \ncommunication center get : {}'.format(commander_data))
-        else:
-            print('Undefined communication error of commander, please check test message')
-            raise KeyboardInterrupt
+        commander_server.send_list(['C','next'])
+        # if commander_data == ['C',1,2,3]:
+        #     print('Commander communication successfully established ! \ncommunication center get : {}'.format(commander_data))
+        # else:
+        #     print('Undefined communication error of commander, please check test message')
+        #     raise KeyboardInterrupt
     except:
         commander_server.close()
         traceback.print_exc()
         print('Communication center fail at commander ')
         sys.exit(0)
+
+###                                                                            ###
+###    Gateway for Vision module communication. See TCN_vision_main.py         ###
+###                                                                            ###
+
+def vision_init():
+    global vision_server,commander_server
+    try:
+        vision_server = TCN_socket.TCP_server(50002,1)
+        vision_data = vision_server.recv_list()
+        if vision_data == ['V','status','Alive']:
+            print("Vision communication successfully established !\ncommunication center get : {}".format(vision_data) )
+            commander_server.send_list(['C','next'])
+        else:
+            print('Undefined communication error of Vision module, please check test message')
+            raise KeyboardInterrupt      
+    except:
+        vision_server.close()
+        traceback.print_exc()
+        print('Communication center fail at STM32 ')
+        sys.exit(0)
+
+
 
 
 ###                                                                   ###
@@ -51,6 +75,7 @@ def stm32_init():
             print("STM32 communication successfully established !\ncommunication center get : {}".format(stm32_data) )
             stm32_server.send_list(['S','T','M',3,2])
             print("Send back ['S','T','M',3,2] for double check")
+            commander_server.send_list(['C','next'])
         else:
             print('Undefined communication error of STM32, please check test message')
             raise KeyboardInterrupt      
@@ -66,15 +91,24 @@ def stm32_init():
 ###                                                                   ###
 
 '''
-[ 'C' , 'exit '] received
-    ['S', 'exit' ] send to STM
+[ 'C' , 'exit ']                received
+    ['S', 'exit' ]              send to STM
 
-[ 'C' , 'xbox' , [x,y,z] ] 
-    ['S' ,'move', [x,y,z]]
+[ 'C' , 'mwx' , [x,y,z] ]       received
+    ['S' ,'move', [x,y,z] ]     send to STM
+        ['S' , next]            received
+            ['C' , 'next']      send to commander
+
+[ 'C' , 'stop_motor ']          received
+    ['S' , 'stop' ]             send to STM
 
 
 
 
+'''
+'''
+['S' , 'next']
+    ['C' , 'next' ]
 
 '''
 
@@ -97,14 +131,14 @@ def bridge_potorcol(receive_data):
                 stm32_server.send_list(['S','move',receive_data[2]])
                 receive_data = stm32_server.recv_list()
                 bridge_potorcol(receive_data)
-                commander_server.send_list(['C','next'])
+                
 
             elif receive_data[1] == 'stop_motor':
                 stm32_server.send_list(['S','stop'])
 
         elif receive_data[0] == 'S':
             if receive_data[1] == 'next':
-                pass
+                commander_server.send_list(['C','next'])
         
         else:
             print('{} received . Wrong potorcol from commander !'.format(receive_data))
@@ -124,7 +158,7 @@ def bridge_potorcol(receive_data):
 ###                                                                   ###
 def main():
     global commander_server,stm32_server,bridge_run
-    commander_server.send_list(['C',0])
+    # commander_server.send_list(['C',0])
     while bridge_run:
         try:
             commander_data = commander_server.recv_list()

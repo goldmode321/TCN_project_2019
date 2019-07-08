@@ -6,41 +6,19 @@ INFO:root:Test connection to communication center,['S',1,2,3'] sent, ['S','T','M
 
 INFO:root:['S','T','M',3,2] received , connection test complete. Program start
 
-INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
+ERROR:root:Got error 
+Traceback (most recent call last):
+  File "/home/pi/TCN2019/TCN_socket.py", line 323, in recv_list
+    receive_list = pickle.loads(self.sock.recv(length))
+KeyboardInterrupt
 
-INFO:root: 'move' command received, movie with [0, 0, 0]
+During handling of the above exception, another exception occurred:
 
-INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
-
-INFO:root: 'move' command received, movie with [0, 0, 0]
-
-INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
-
-INFO:root: 'move' command received, movie with [0, 0, 0]
-
-INFO:root:Command in : ['S', 'move', [0, 1, 0]] 
-
-INFO:root: 'move' command received, movie with [0, 1, 0]
-
-INFO:root:Command in : ['S', 'move', [0, 0, 0]] 
-
-INFO:root: 'move' command received, movie with [0, 0, 0]
-
-INFO:root:Command in : ['S', 'move', [-1, 0, 0]] 
-
-INFO:root: 'move' command received, movie with [-1, 0, 0]
-
-INFO:root:Command in : ['S', 'move', [-1, 4, 0]] 
-
-INFO:root: 'move' command received, movie with [-1, 4, 0]
-
-INFO:root:Command in : ['S', 'move', [-4, 0, 0]] 
-
-INFO:root: 'move' command received, movie with [-4, 0, 0]
-
-INFO:root:Command in : ['S', 'exit'] 
-
-INFO:root: 'exit' command received, start terminating program
-
+Traceback (most recent call last):
+  File "TCN_STM32_main.py", line 70, in main
+    data_get = stm32_client.recv_list()
+  File "/home/pi/TCN2019/TCN_socket.py", line 330, in recv_list
+    sys.exit(0) # Exit program
+SystemExit: 0
 INFO:root:STM32 is off 
 
