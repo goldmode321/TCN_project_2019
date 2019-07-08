@@ -5,13 +5,17 @@ import subprocess
 import traceback
 import threading
 import TCN_xbox
+import logging
 
-
+process_stm32 = None
 process_bridge = None
+process_vision = None
+process_lidar = None
+process_algorithm = None
 commander_client = None
 commander_run = False
-process_stm32 = None
 xbox = None
+logging.basicConfig(filename='Main.log',filemode = 'w',level =logging.INFO)
 ###                                                                   ###
 ###    Preview function                                               ###
 ###                                                                   ###
@@ -45,6 +49,7 @@ def commander_portocol(commander_receive):
 def xbox_init():
     global xbox
     xbox = TCN_xbox.xbox_controller()
+    logging.info('Xbox start without error')
 
 
 ###                                                                   ###
@@ -52,39 +57,56 @@ def xbox_init():
 ###                                                                   ###
 def commander_init():
     try:
-        global process_bridge, commander_client,commander_run,process_stm32
+        global commander_client,commander_run, process_bridge, process_stm32 , process_vision , process_lidar , process_algorithm
         
         process_bridge = subprocess.Popen('python3 TCN_bridge.py',shell = True)
         print('##### Initializing communication center #####')
+        logging.info("Bridge - commander initialize")
         time.sleep(1)    # Wait some time for assuming Communication center(CC) work  稍微delay，以確保CC正常運作
         print("Establish TCP connection to communication center\nSend test data ['C',1,2,3]")
         commander_client = TCN_socket.TCP_client(50000)
         commander_receive = commander_client.recv_list()
         commander_portocol(commander_receive) # Waiting for [ 'C' , 'next' ]
+        logging.info("Bridge - commander initialization completed\n")
 
         print('\n\n##### Initializing Vision module #####')
-        process_stm32 = subprocess.Popen('python3 TCN_vision_main.py',shell = True)
+        logging.info("Vision module initialize")
+        process_vision = subprocess.Popen('python3 TCN_vision_main.py',shell = True)
         commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
         commander_portocol(commander_receive)
+        logging.info("Vision module initialization complete\n")
 
 
         print('\n\n##### Initializing STM32 #####')
+        logging.info("STM32 initialize")
         process_stm32 = subprocess.Popen('python3 TCN_STM32_main.py',shell = True)
         commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
         commander_portocol(commander_receive)
+        logging.info("STM32 initialization complete\n")
 
 
 
         commander_run = True
-        # if commander_receive == (['C',0]):
-        #     commander_run = True
+
             
 
 
     except:
+        if process_algorithm != None:
+            process_algorithm.kill()
+        if process_stm32 != None:
+            process_stm32.kill()
+        if process_lidar != None:
+            process_lidar.kill()
+        if process_vision != None:
+            process_vision.kill()
+        if process_bridge != None:
+            process_bridge.kill()            
         commander_client.close()
+        xbox.close()
         traceback.print_exc()
-        print('\n Commander communication fail')
+
+        logging.exception("Got error : \n")
 
 
 
@@ -97,12 +119,12 @@ def commander_init():
 ###     Waiting for User Command                                      ###
 ###                                                                   ###
 def main():
-    global process_bridge, commander_client , commander_run, process_stm32
+    global commander_client,commander_run, process_bridge, process_stm32 , process_vision , process_lidar , process_algorithm
     print('\n\n @@@ Program is all set, now is ready to run @@@')
 
     while commander_run:
         try:
-            command = input('\nPlease enter command (Enter "h" for help menu)')
+            command = input('\nPlease enter command (Enter "h" for help menu) : ')
             if command == 'h':
                 help_menu()
 

@@ -206,10 +206,10 @@ class TCP_server(object):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.setblocking(self.setblocking)
             self.sock.bind((self.ip, self.port))
-            print('Server initiate - '+ self.ip+ ' : '+ str(self.port))
+            # print('Server initiate - '+ self.ip+ ' : '+ str(self.port))
             self.sock.listen(1)
             self.connection = self.sock.accept()
-            print('Client connected')
+            # print('Client connected')
 
         except:
             self.sock.close()
@@ -224,7 +224,7 @@ class TCP_server(object):
     def recv_string(self, length = 1):
         try:
             
-            print('Client connected')
+            # print('Client connected')
             receive_str = self.connection[0].recv(length).decode('utf-8')
             return receive_str
         
@@ -281,7 +281,7 @@ class TCP_server(object):
     def close(self):
         ''' Close server '''
         self.sock.close()
-        print('Server close without error')
+        # print('Server close without error')
 
 
 
@@ -361,7 +361,7 @@ class TCP_client(object):
     def close(self):
         ''' Close server '''
         self.sock.close()
-        print('Client close without error')
+        # print('Client close without error')
 
 
 

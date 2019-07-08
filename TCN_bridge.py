@@ -17,7 +17,7 @@ commander_server = None
 stm32_server = None
 vision_server = None
 bridge_run = False
-
+logging.basicConfig(filename='Bridge.log',filemode = 'w',level =logging.INFO)
 
 
 def bridge_init():
@@ -27,6 +27,7 @@ def bridge_init():
         vision_init()
         stm32_init()
         bridge_run = True
+        logging.info("Bridge is ready to run ! \n")
     except:
         if commander_server != None:
             commander_server.close()
@@ -44,13 +45,16 @@ def bridge_init():
 def commander_init():
     global commander_server
     try:
+        logging.info("Initialize commander server\n")
         commander_server = TCN_socket.TCP_server(50000,1)
         commander_server.send_list(['C','next'])
+        logging.info("Commander connection complete !\n")
 
     except:
         commander_server.close()
         traceback.print_exc()
-        print('Bridge initializing fail at commander_init()')
+        logging.info('Bridge initializing fail at commander_init()\n')
+        logging.exception("Got error : \n")
         
 
 ###                                                                            ###
@@ -60,17 +64,20 @@ def commander_init():
 def vision_init():
     global vision_server,commander_server
     try:
+        logging.info("Initialize vision server\n")
         vision_server = TCN_socket.TCP_server(50001,1)
         vision_data = vision_server.recv_list()
         if vision_data == ['V','status','Alive']:
-            print("Vision communication successfully established !\ncommunication center get : {}".format(vision_data) )
+            logging.info("Vision communication successfully established !\ncommunication center get : {} \n".format(vision_data) )
             commander_server.send_list(['C','next'])
         else:
             print('Undefined communication error of Vision module, please check test message')
+            logging.info("Undefined communication error of Vision module, please check test message\n")
             raise KeyboardInterrupt      
     except:
         traceback.print_exc()
-        print('Bridge initializing fail at vision_init()')
+        logging.info('Bridge initializing fail at vision_init()\n')
+        logging.exception("Got error : \n")
 
 
 
@@ -83,21 +90,24 @@ def vision_init():
 def stm32_init():
     global stm32_server
     try:
+        logging.info("Initialize STM32 server\n")
         stm32_server = TCN_socket.TCP_server(50003,1)
         stm32_data = stm32_server.recv_list()
-        if stm32_data == ['S',1,2,3]:
-            print("STM32 communication successfully established !\ncommunication center get : {}".format(stm32_data) )
-            stm32_server.send_list(['S','T','M',3,2])
-            print("Send back ['S','T','M',3,2] for double check")
-            commander_server.send_list(['C','next'])
-        else:
-            print('Undefined communication error of STM32, please check test message')
-            raise KeyboardInterrupt      
+        bridge_potorcol(stm32_data)
+        # if stm32_data == ['S',1,2,3]:
+        #     print("STM32 communication successfully established !\ncommunication center get : {}".format(stm32_data) )
+        #     stm32_server.send_list(['S','T','M',3,2])
+        #     print("Send back ['S','T','M',3,2] for double check")
+        #     commander_server.send_list(['C','next'])
+        # else:
+        #     print('Undefined communication error of STM32, please check test message')
+        #     raise KeyboardInterrupt      
     except:
         stm32_server.close()
         traceback.print_exc()
         print('Bridge initializing fail at stm32_init()')
-
+        logging.info('Bridge initializing fail at stm32_init()\n')
+        logging.exception("Got error : \n")
 
 
 ###                                                                   ###
@@ -139,6 +149,7 @@ def bridge_potorcol(receive_data):
                 commander_server.close()
                 stm32_server.close()
                 bridge_run = False
+                
             # elif commander_data[1] == 'key_move':
             #     stm32_server.send_list(['S','move',[ commander_data[2],commander_data[3],commander_data[4] ] ])
             
@@ -154,16 +165,23 @@ def bridge_potorcol(receive_data):
         elif receive_data[0] == 'S':
             if receive_data[1] == 'next':
                 commander_server.send_list(['C','next'])
-        
+
+
+
+        elif receive_data[0] == 'V':
+            if receive_data[1] == 'next':
+                commander_server.send_list(['C','next'])        
         else:
-            print('{} received . Wrong potorcol from commander !'.format(receive_data))
+            print('{} received . Wrong potorcol  !'.format(receive_data))
+            logging.info('{} received . Wrong potorcol  !'.format(receive_data))
+            
 
     except:
         commander_server.close()
         stm32_server.close()
         vision_server.close()
         traceback.print_exc()
-
+        logging.exception("Got error : \n")
     
 
 
@@ -178,6 +196,7 @@ def bridge_main():
     while bridge_run:
         try:
             commander_data = commander_server.recv_list()
+            logging.info("Bridge receive {} from commander\n".format(commander_data))
             bridge_potorcol(commander_data)
 
         except:
@@ -185,12 +204,14 @@ def bridge_main():
             vision_server.close()
             stm32_server.close()
             traceback.print_exc()
+            logging.exception("Got error : \n")
             bridge_run = False
 
 def end_bridge():
     commander_server.close()
     vision_server.close()
     stm32_server.close()
+    logging.info("Bridge close successfully")
             
 
 

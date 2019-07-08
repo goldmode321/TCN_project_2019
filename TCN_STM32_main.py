@@ -19,7 +19,7 @@ def init():
     try:
         logging.basicConfig(filename='STM32_main.log',filemode = 'w',level =logging.INFO)
         stm32 = TCN_STM32_protocol.STM32_command()
-        logging.info('Successfully connect to STM32\n')
+        logging.info('Successfully connect to STM32 , port : {} \n'.format(stm32.USB_port_PATH))
         stm32_client = TCN_socket.TCP_client(50003)
         logging.info('STM32 communication established\n')
         stm32_client.send_list(['S',1,2,3])
@@ -41,7 +41,7 @@ def init():
 
 '''Portocol function'''
 
-def portocol(data_get):
+def stm32_portocol(data_get):
     global stm32,stm32_client,keep_running
     if data_get[0] == 'S':
         if data_get[1] == 'exit':
@@ -69,7 +69,7 @@ def main():
         try:
             data_get = stm32_client.recv_list()
             logging.info('Command in : {} \n'.format(data_get))
-            portocol(data_get)
+            stm32_portocol(data_get)
 
 
         except:
