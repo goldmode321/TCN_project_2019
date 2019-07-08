@@ -5,6 +5,7 @@ import traceback
 import subprocess
 import sys
 import threading
+import logging
 
 '''Portocol'''
 ''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
