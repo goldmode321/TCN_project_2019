@@ -22,16 +22,17 @@ def init():
         logging.info('Successfully connect to STM32 , port : {} \n'.format(stm32.USB_port_PATH))
         stm32_client = TCN_socket.TCP_client(50003)
         logging.info('STM32 communication established\n')
-        stm32_client.send_list(['S',1,2,3])
-        logging.info("Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received\n")
-        data_get = stm32_client.recv_list()
-        if data_get == ['S','T','M',3,2]:
-            keep_running = True
-            logging.info("['S','T','M',3,2] received , connection test complete. Program start\n")
-        else:
-            keep_running = False
-            print('Something wrong for connection check, wrong potorcol')
-            logging.info(str(data_get)+" . Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py\n")
+        # stm32_client.send_list(['S',1,2,3])
+        # logging.info("Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received\n")
+        # data_get = stm32_client.recv_list()
+        # if data_get == ['S','T','M',3,2]:
+        #     keep_running = True
+        #     logging.info("['S','T','M',3,2] received , connection test complete. Program start\n")
+        # else:
+        #     keep_running = False
+        #     print('Something wrong for connection check, wrong potorcol')
+        #     logging.info(str(data_get)+" . Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py\n")
+        stm32_client.send_list(['S','next'])
     except:
         traceback.print_exc()
         logging.exception("Got error\n")
