@@ -77,6 +77,14 @@ def commander_init():
         logging.info("Vision module initialization complete\n")
 
 
+        print('\n\n##### Initializing RPLiDAR #####')
+        logging.info("RPLiDAR initialize")
+        process_lidar = subprocess.Popen('python3 TCN_rplidar_main.py',shell = True)
+        commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
+        commander_portocol(commander_receive)
+        logging.info("Vision module initialization complete\n")
+
+
         print('\n\n##### Initializing STM32 #####')
         logging.info("STM32 initialize")
         process_stm32 = subprocess.Popen('python3 TCN_STM32_main.py',shell = True)

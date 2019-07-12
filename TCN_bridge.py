@@ -14,6 +14,7 @@ import logging
 ###    global variables                                               ###
 ###                                                                   ###
 commander_server = None
+lidar_server = None
 stm32_server = None
 vision_server = None
 bridge_run = False
@@ -21,10 +22,11 @@ logging.basicConfig(filename='Bridge.log',filemode = 'w',level =logging.INFO)
 
 
 def bridge_init():
-    global commander_server,stm32_server , vision_server , bridge_run
+    global commander_server,stm32_server , vision_server , lidar_server , bridge_run
     try:
         commander_init()
         vision_init()
+        lidar_init()
         stm32_init()
         bridge_run = True
         logging.info("Bridge is ready to run ! \n")
@@ -77,6 +79,30 @@ def vision_init():
     except:
         traceback.print_exc()
         logging.info('Bridge initializing fail at vision_init()\n')
+        logging.exception("Got error : \n")
+
+
+
+###                                                                            ###
+###    Gateway for RPLiDAR communication. See TCN_vision_main.py               ###
+###                                                                            ###
+
+def lidar_init():
+    global lidar_server,commander_server
+    try:
+        logging.info("Initialize lidar server\n")
+        lidar_server = TCN_socket.TCP_server(50002,1)
+        lidar_data = lidar_server.recv_list()
+        if lidar_data == ['L','status','Good']:
+            logging.info("Lidar communication successfully established !\ncommunication center get : {} \n".format(lidar_data) )
+            commander_server.send_list(['C','next'])
+        else:
+            print('Undefined communication error of Vision module, please check test message')
+            logging.info("Undefined communication error of Vision module, please check test message\n")
+            raise KeyboardInterrupt      
+    except:
+        traceback.print_exc()
+        logging.info('Bridge initializing fail at lidar_init()\n')
         logging.exception("Got error : \n")
 
 
@@ -144,10 +170,13 @@ def bridge_potorcol(receive_data):
             if receive_data[1] == 'exit':
                 stm32_server.send_list(['S','exit'])
                 vision_server.send_list(['V','exit'])
+                lidar_server.send_list(['L','exit'])
                 print('All server will be close in 3 second')
                 time.sleep(3)
                 commander_server.close()
                 stm32_server.close()
+                vision_server.close()
+                lidar_server.close()
                 bridge_run = False
                 
             # elif commander_data[1] == 'key_move':
@@ -170,7 +199,12 @@ def bridge_potorcol(receive_data):
 
         elif receive_data[0] == 'V':
             if receive_data[1] == 'next':
-                commander_server.send_list(['C','next'])        
+                commander_server.send_list(['C','next'])      
+
+        elif receive_data[0] == 'L':
+            if receive_data[1] == 'next':
+                commander_server.send_list(['C','next']) 
+
         else:
             print('{} received . Wrong potorcol  !'.format(receive_data))
             logging.info('{} received . Wrong potorcol  !'.format(receive_data))
