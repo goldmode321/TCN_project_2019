@@ -33,6 +33,7 @@ def init():
         #     print('Something wrong for connection check, wrong potorcol')
         #     logging.info(str(data_get)+" . Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py\n")
         stm32_client.send_list(['S','next'])
+        keep_running = True
     except:
         traceback.print_exc()
         logging.exception("Got error\n")

@@ -1,0 +1,8 @@
+INFO:root:Connection to Vision module establiished , Vision module status : [0, 'Alive']
+
+INFO:root:Command in : ['V', 'exit'] 
+
+INFO:root: 'exit' command received, start terminating program
+
+INFO:root: Vision module is off 
+

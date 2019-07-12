@@ -58,8 +58,9 @@ class Lidar(object):
         health = self.lidar.get_health()
         data.append(health)
 
-        for i,scan in enumerate(self.lidar.iter_measurments()):
-                data.append(scan)
+        # for i,scan in enumerate(self.lidar.iter_measurments()):
+        for scan in self.lidar.iter_scans():
+            data
                 if i>Number_of_turns-2:
                     self.lidar.stop() 
                     return data

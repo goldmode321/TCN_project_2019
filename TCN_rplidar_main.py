@@ -19,7 +19,7 @@ def init():
         lidar = TCN_rplidar.Lidar()
         lidar_status = lidar.get_status()
         logging.info("lidar initialize successuflly")
-        lidar_client.send(['L','status',str(lidar_status[0])])
+        lidar_client.send_list(['L','status',str(lidar_status[0])])
         lidar_run_flag = True
 
     except:
@@ -49,11 +49,13 @@ def end():
 def lidar_portocol(lidar_receive):
     global lidar_run_flag
     if lidar_receive[0] == 'L':
-        if lidar_receive[1] == 'end':
+        if lidar_receive[1] == 'exit':
             lidar_run_flag = False
 
     else:
         logging.warning("Wrong portocol to Lidar communication , please check lidar_portocol or bridge portocol")
+
+
 
 
 

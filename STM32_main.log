@@ -1,24 +1,6 @@
-INFO:root:Successfully connect to STM32
+INFO:root:Successfully connect to STM32 , port : /dev/ttyUSB1 
 
 INFO:root:STM32 communication established
 
-INFO:root:Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received
-
-INFO:root:['S','T','M',3,2] received , connection test complete. Program start
-
-ERROR:root:Got error 
-Traceback (most recent call last):
-  File "/home/pi/TCN2019/TCN_socket.py", line 323, in recv_list
-    receive_list = pickle.loads(self.sock.recv(length))
-KeyboardInterrupt
-
-During handling of the above exception, another exception occurred:
-
-Traceback (most recent call last):
-  File "TCN_STM32_main.py", line 70, in main
-    data_get = stm32_client.recv_list()
-  File "/home/pi/TCN2019/TCN_socket.py", line 330, in recv_list
-    sys.exit(0) # Exit program
-SystemExit: 0
 INFO:root:STM32 is off 
 

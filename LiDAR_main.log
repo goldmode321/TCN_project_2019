@@ -1,0 +1,19 @@
+INFO:root:Initializing Lidar_client
+INFO:root:Initializing RPLidar
+INFO:root:Scanning RPLidar port
+INFO:root:Scanning /dev/ttyUSB0
+INFO:rplidar:Starting motor
+INFO:root:('Good', 0)
+INFO:root:lidar initialize successuflly
+INFO:root:lidar received : ['L', 'exit'] 
+INFO:root:lidar received : None 
+ERROR:root:Got error : 
+Traceback (most recent call last):
+  File "TCN_rplidar_main.py", line 36, in main
+    lidar_portocol(lidar_receive)
+  File "TCN_rplidar_main.py", line 51, in lidar_portocol
+    if lidar_receive[0] == 'L':
+TypeError: 'NoneType' object is not subscriptable
+INFO:rplidar:Stoping scanning
+INFO:root:RPLidar disconnect
+INFO:root:Lidar closed successfully

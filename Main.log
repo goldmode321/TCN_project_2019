@@ -1,0 +1,13 @@
+INFO:root:Xbox start without error
+INFO:root:Bridge - commander initialize
+INFO:root:Bridge - commander initialization completed
+
+INFO:root:Vision module initialize
+INFO:root:Vision module initialization complete
+
+INFO:root:RPLiDAR initialize
+INFO:root:Vision module initialization complete
+
+INFO:root:STM32 initialize
+INFO:root:STM32 initialization complete
+

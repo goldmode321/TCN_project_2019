@@ -1,0 +1,21 @@
+INFO:root:Initialize commander server
+
+INFO:root:Commander connection complete !
+
+INFO:root:Initialize vision server
+
+INFO:root:Vision communication successfully established !
+communication center get : ['V', 'status', 'Alive'] 
+
+INFO:root:Initialize lidar server
+
+INFO:root:Lidar communication successfully established !
+communication center get : ['L', 'status', 'Good'] 
+
+INFO:root:Initialize STM32 server
+
+INFO:root:Bridge is ready to run ! 
+
+INFO:root:Bridge receive ['C', 'exit'] from commander
+
+INFO:root:Bridge close successfully
