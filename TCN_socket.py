@@ -243,7 +243,18 @@ class TCP_server(object):
     def recv_list(self, length = 4096):
         try:
             
-            receive_list = pickle.loads(self.connection[0].recv(length))
+            # receive_list = pickle.loads(self.sock.recv(length))
+            receive_list = []
+            while True:
+                temp_receive_list = self.connection[0].recv(length)
+                receive_list.append(temp_receive_list)
+                print("in the loop")
+                if sys.getsizeof(temp_receive_list) < length:
+                    break
+
+            receive_list = pickle.loads(b"".join(receive_list)) 
+            print("loop closed")
+
             return receive_list
         
         except socket.timeout: # if server didn't get any data in a period of time 
@@ -251,11 +262,11 @@ class TCP_server(object):
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
             sys.exit(0) # Exit program
-        except socket.error as e:
+        except socket.error:
             #print(e)
             pass
-        except Exception as e:
-            print(e)
+        except:
+            traceback.print_exc()
             self.sock.close()
 
     def send_string(self, message = ''):
@@ -313,14 +324,25 @@ class TCP_client(object):
         except socket.error as e:
             print(e)
             pass
-        except Exception as e:
-            print(e)
+        except:
+            traceback.print_exc()
             self.sock.close()
 
     def recv_list(self, length = 4096):
         try:
             
-            receive_list = pickle.loads(self.sock.recv(length))
+            # receive_list = pickle.loads(self.sock.recv(length))
+            receive_list = []
+            while True:
+                temp_receive_list = self.sock.recv(length)
+                receive_list.append(temp_receive_list)
+                print("in the loop")
+                if sys.getsizeof(temp_receive_list) < length:
+                    break
+
+            receive_list = pickle.loads(b"".join(receive_list)) 
+            print("loop closed")
+
             return receive_list
         
         except socket.timeout: # if server didn't get any data in a period of time 
@@ -331,8 +353,8 @@ class TCP_client(object):
         except socket.error as e:
             print(e)
             pass
-        except Exception as e:
-            print(e)
+        except:
+            traceback.print_exc()
             self.sock.close()
 
     def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
@@ -343,9 +365,9 @@ class TCP_client(object):
             else:
                 self.sock.sendto(message.encode('utf-8') , (ip,port))
 
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
+            traceback.print_exc()
 
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
@@ -354,9 +376,9 @@ class TCP_client(object):
                 self.sock.sendto(pickle.dumps(list) , (self.ip, self.port) )
             else:
                 self.sock.sendto(pickle.dumps(list) , (ip,port) )
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
+            traceback.print_exc()
 
     def close(self):
         ''' Close server '''

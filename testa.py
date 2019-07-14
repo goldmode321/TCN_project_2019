@@ -31,6 +31,10 @@ finally:
     print('closing socket')
     sock.close()
 '''
+
+
+
+'''
 class cdf:
     def c(self):
         print('c')
@@ -40,6 +44,75 @@ class cdf:
     
     def f(self):
         print('f')
+'''
+
+'''
+import threading
+import time
+import traceback
+global b 
+b = 0
+def printA():
+    global b
+    runA = True
+    
+    while runA:
+        try:
+            b = b + 1
+            print('A')
+            time.sleep(1)
+        except:
+            print('printA terminate')
+            runA = False
 
 
+t1 = threading.Thread(target = printA)
+t1.daemon = True
+t1.start()
+
+run = True
+
+try:
+    while run:
+        print('B')
+        time.sleep(0.5)
+        print(b)
+
+except:
+    traceback.print_exc()
+    run = False
+'''
+import TCN_socket
+import time
+import threading
+
+client = TCN_socket.TCP_client(55555)
+# client = TCN_socket.TCP_server(55555,1)
+global i
+i = 0
+
+def multi():
+    global i 
+    while True:
+        i = i+1
+        time.sleep(0.5)
+
+
+
+thread = threading.Thread(target = multi)
+thread.daemon = True
+thread.start()
+
+
+while True:
+    try:
+        
+        data = client.recv_list()
+        print('client get {} '.format(data))
+        time.sleep(1)
+        # client.send_list(['number of receive',i])
+        client.send_list(['thread run',i])
+    except:
+        client.close()
+        break
 

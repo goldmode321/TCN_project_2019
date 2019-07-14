@@ -166,7 +166,10 @@ def bridge_potorcol(receive_data):
     global commander_server , stm32_server , vision_server , bridge_run
     '''First, get commander command (TCN_main.py)'''
     try:
-        if receive_data[0] == 'C':
+        if receive_data == None:
+            print('socket got problem')
+
+        elif receive_data[0] == 'C':
             if receive_data[1] == 'exit':
                 stm32_server.send_list(['S','exit'])
                 vision_server.send_list(['V','exit'])
@@ -186,6 +189,12 @@ def bridge_potorcol(receive_data):
                 stm32_server.send_list(['S','move',receive_data[2]])
                 receive_data = stm32_server.recv_list()
                 bridge_potorcol(receive_data)
+
+            elif receive_data[1] == 'gld':
+                lidar_server.send_list(['L','gld'])
+                lidar_data = lidar_server.recv_list()
+                logging.info("gld : received from lidar : {} ".format(lidar_data))
+                bridge_potorcol(lidar_data)
                 
 
             elif receive_data[1] == 'stop_motor':
@@ -204,6 +213,9 @@ def bridge_potorcol(receive_data):
         elif receive_data[0] == 'L':
             if receive_data[1] == 'next':
                 commander_server.send_list(['C','next']) 
+            
+            if receive_data[1] == 'gld':
+                commander_server.send_list(['C','gld',receive_data[2]])
 
         else:
             print('{} received . Wrong potorcol  !'.format(receive_data))

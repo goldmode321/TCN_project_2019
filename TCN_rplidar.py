@@ -45,25 +45,34 @@ class Lidar(object):
         self.lidar.disconnect()
         logging.info("RPLidar disconnect")  
 
+    def reconnect(self):
+        self.lidar.stop()
+        self.lidar = rplidar.RPLidar(self.lidar_USB_port)
 
-    def get_lidar_data(self,Number_of_turns=1):
+    def get_lidar_object(self):
+        return self.lidar
 
-        data=[]
+    def get_lidar_data(self):
 
-        self.lidar.clear_input()
+        # data=[]
 
-        info = self.lidar.get_info()
-        data.append(info)
+        # self.lidar.clear_input()
 
-        health = self.lidar.get_health()
-        data.append(health)
+        # info = self.lidar.get_info()
+        # data.append(info)
+
+        # health = self.lidar.get_health()
+        # data.append(health)
 
         # for i,scan in enumerate(self.lidar.iter_measurments()):
-        for scan in self.lidar.iter_scans():
-            data
-                if i>Number_of_turns-2:
-                    self.lidar.stop() 
-                    return data
+        try:
+            for scan in self.lidar.iter_scans():
+                self.data = scan
+
+        except:
+            self.lidar.stop()
+            self.lidar = rplidar.RPLidar(self.lidar_USB_port)
+
 
 
 

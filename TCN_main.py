@@ -25,6 +25,7 @@ def help_menu():
     print(" xt : Xbox test ")                       # None
     print(" mwx : Xbox remote control ")            # [ 'C' , 'xbox' , [x,y,z] ]
     print(" xtg : Xbox test, gpio ")
+    print(" gld : Get current lidar data ")
     
 
 
@@ -37,9 +38,15 @@ def help_menu():
 '''
 def commander_portocol(commander_receive):
     global commander_client,commander_run,xbox,process_bridge,process_stm32
+
+    logging.info("Commander received : {}".format(commander_receive))
+
     if commander_receive[0] == 'C':
         if commander_receive[1] == 'next':
             pass
+
+        if commander_receive[1] == 'gld':
+            print(commander_receive[2])
 
 
 
@@ -150,6 +157,11 @@ def main():
                     commander_receive = commander_client.recv_list()
                     commander_portocol(commander_receive)
                 commander_client.send_list(['C','stop_motor'])
+
+            elif command == 'gld':
+                commander_client.send_list(['C','gld'])
+                commander_receive = commander_client.recv_list()
+                commander_portocol(commander_receive)
 
 
             else:

@@ -9,6 +9,7 @@
 import serial
 import sys
 from TCN_gpio import STM32_power 
+import logging
 
 
 
@@ -25,6 +26,7 @@ class STM32_command(object):
     def __init__(self, USB_port_path = "/dev/ttyUSB",AUTO_DETECT_PORT = True, USB_port_num = 0, baudrate = 115200, timeout =1):
         '''When "STM32_command" is called, this function automatically run'''
         # Initial parameters 
+        logging.basicConfig(filename='STM32_main.log',filemode = 'a',level =logging.INFO)
         self.USB_port_num = USB_port_num # Initial port to scan (0)
         self.USB_port_path = USB_port_path # Default raspbian tty path is "/dev/ttyUSB"
         self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num) # Full path for scanning USB
@@ -54,16 +56,20 @@ class STM32_command(object):
                 # Thus cut searching when ID is too much. (Time save)
                 if self.USB_port_num > 10:
                     print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
-                    self.STM32_power.off()
-                    sys.exit(0)
+                    self.USB_port_num = 0
+                    # self.STM32_power.off()
+                    # sys.exit(0)
                 
                 # Setup communication with serial port
                 # If port not found, trigger IOError
                 # If found, test protocol.
-                print('Connect to'+str(self.USB_port_PATH))
+                logging.info('Connect to'+str(self.USB_port_PATH))
                 self.ser = serial.Serial(self.USB_port_PATH, self.baudrate,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
+                # self.ser.reset_input_buffer()
+
+                logging.debug("Number of bytes in input buffer {}".format(self.ser.in_waiting))
                 data = bytearray(self.ser.read(12))
-                
+                logging.info('USB port return : {}'.format(data))
                 # Test protocol
                 # Start byte of serial output of STM32 is 0xff, 0xfe,....... 
                 if data[0] == 255 and data[1] == 254 : 
@@ -72,7 +78,13 @@ class STM32_command(object):
 
                 else:
                     # Scan next port in next loop
+                    
+                    logging.debug("Number of bytes in input buffer {}".format(self.ser.in_waiting))
                     self.USB_port_num = self.USB_port_num + 1
+                    self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num) 
+                    # self.ser.close()
+                    self.ser.reset_input_buffer()
+                    self.ser.close()
 
         except IOError:
             # If not found, scan next port and reload this function
