@@ -248,12 +248,12 @@ class TCP_server(object):
             while True:
                 temp_receive_list = self.connection[0].recv(length)
                 receive_list.append(temp_receive_list)
-                print("in the loop")
+                # print("in the loop")
                 if sys.getsizeof(temp_receive_list) < length:
                     break
 
             receive_list = pickle.loads(b"".join(receive_list)) 
-            print("loop closed")
+            # print("loop closed")
 
             return receive_list
         
@@ -330,18 +330,14 @@ class TCP_client(object):
 
     def recv_list(self, length = 4096):
         try:
-            
-            # receive_list = pickle.loads(self.sock.recv(length))
             receive_list = []
             while True:
                 temp_receive_list = self.sock.recv(length)
                 receive_list.append(temp_receive_list)
-                print("in the loop")
                 if sys.getsizeof(temp_receive_list) < length:
                     break
 
             receive_list = pickle.loads(b"".join(receive_list)) 
-            print("loop closed")
 
             return receive_list
         

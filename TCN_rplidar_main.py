@@ -54,12 +54,8 @@ def lidar_protocol(lidar_receive):
         if lidar_receive[0] == 'L':
             if lidar_receive[1] == 'exit':
                 lidar_run_flag = False
+                
             if lidar_receive[1] == 'gld':
-                print('\n\n lidar')
-                print(lidar_data)
-                print(len(lidar_data))
-                print(type(lidar_data))
-                print('\n\n')
                 logging.debug("lidar data {}".format(lidar_data))
                 if lidar_data != None:
                     lidar_client.send_list(['L','gld',lidar_data])

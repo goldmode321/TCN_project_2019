@@ -55,7 +55,7 @@ class STM32_command(object):
                 # It is very rare that port ID is more than 10
                 # Thus cut searching when ID is too much. (Time save)
                 if self.USB_port_num > 10:
-                    print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
+                    # print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
                     self.USB_port_num = 0
                     # self.STM32_power.off()
                     # sys.exit(0)
@@ -88,7 +88,7 @@ class STM32_command(object):
 
         except IOError:
             # If not found, scan next port and reload this function
-            print('port not found :'+ self.USB_port_PATH)
+            # print('port not found :'+ self.USB_port_PATH)
             self.USB_port_num = self.USB_port_num + 1
             self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num)
             self.auto_detect_port()
