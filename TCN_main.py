@@ -144,7 +144,7 @@ def main():
                 help_menu()
 
             elif command == 'exit':
-                commander_client.send_list(['C','exit'])
+                commander_client.send_list(['C','exit','all'])
                 commander_run = False
 
             elif command == 'xt':
@@ -168,7 +168,7 @@ def main():
                 commander_client.send_list(['C',command])
         
         except:
-            commander_client.send_list(['C','exit'])
+            commander_client.send_list(['C','exit','all'])
             commander_run = False
             
     commander_client.close()

@@ -171,16 +171,17 @@ def bridge_potorcol(receive_data):
 
         elif receive_data[0] == 'C':
             if receive_data[1] == 'exit':
-                stm32_server.send_list(['S','exit'])
-                vision_server.send_list(['V','exit'])
-                lidar_server.send_list(['L','exit'])
-                print('All server will be close in 3 second')
-                time.sleep(3)
-                commander_server.close()
-                stm32_server.close()
-                vision_server.close()
-                lidar_server.close()
-                bridge_run = False
+                if receive_data[2] == 'all':
+                    stm32_server.send_list(['S','exit'])
+                    vision_server.send_list(['V','exit'])
+                    lidar_server.send_list(['L','exit'])
+                    print('All server will be close in 3 second')
+                    time.sleep(3)
+                    commander_server.close()
+                    stm32_server.close()
+                    vision_server.close()
+                    lidar_server.close()
+                    bridge_run = False
                 
             # elif commander_data[1] == 'key_move':
             #     stm32_server.send_list(['S','move',[ commander_data[2],commander_data[3],commander_data[4] ] ])
