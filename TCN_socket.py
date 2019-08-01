@@ -49,16 +49,20 @@ class UDP_server(object):
 
     def recv_list(self, length = 4096):
         try:
-            if self.method == 'socket':
-                #buf = b''
-                #while len(buf) < 4:
-                #    buf += self.sock.recv(4-len(buf))
-                #print(buf)
-                #print(struct.unpack('!I',buf))
-                #receive_list = pickle.loads(struct.unpack('!I',buf)[0])
-                #receive_list = struct.unpack('!I',buf)[0]
-                receive_list = pickle.loads(self.sock.recv(length))
-                return receive_list
+            receive_list = []
+            while True:
+                try:
+                    temp_receive_list = self.sock.recv(length)
+                    receive_list.append(temp_receive_list)
+                    # print("in the loop")
+                    if sys.getsizeof(temp_receive_list) < length:
+                        break
+                except:
+                    break
+
+            receive_list = pickle.loads(b"".join(receive_list)) 
+
+            return receive_list
         
         except socket.timeout: # if server didn't get any data in a period of time 
             pass               # Do nothing and pass  , the return data is 'None' 
@@ -71,6 +75,9 @@ class UDP_server(object):
         except Exception as e:
             print(e)
             self.sock.close()
+            raise KeyboardInterrupt
+
+            
 
     def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
         ''' Send string to target port (default IP is 127.0.0.1)'''
@@ -138,7 +145,18 @@ class UDP_client(object):
 
     def recv_list(self, length = 4096):
         try:
-            receive_list = pickle.loads(self.sock.recv(length))
+            receive_list = []
+            while True:
+                try:
+                    temp_receive_list = self.sock.recv(length)
+                    receive_list.append(temp_receive_list)
+                    # print("in the loop")
+                    if sys.getsizeof(temp_receive_list) < length:
+                        break
+                except:
+                    break
+
+            receive_list = pickle.loads(b"".join(receive_list)) 
             return receive_list
         
         except socket.timeout: # if server didn't get any data in a period of time 
@@ -152,6 +170,7 @@ class UDP_client(object):
         except:
             self.sock.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
 
     def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
         ''' Send string to target port (default IP is 127.0.0.1)'''
@@ -233,12 +252,13 @@ class TCP_server(object):
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
             sys.exit(0) # Exit program
-        except socket.error:
-            #print(e)
-            pass
+        # except socket.error:
+        #     #print(e)
+        #     pass
         except:
             traceback.print_exc()
             self.sock.close()
+            raise KeyboardInterrupt
 
     def recv_list(self, length = 4096):
         try:
@@ -246,10 +266,13 @@ class TCP_server(object):
             # receive_list = pickle.loads(self.sock.recv(length))
             receive_list = []
             while True:
-                temp_receive_list = self.connection[0].recv(length)
-                receive_list.append(temp_receive_list)
-                # print("in the loop")
-                if sys.getsizeof(temp_receive_list) < length:
+                try:
+                    temp_receive_list = self.connection[0].recv(length)
+                    receive_list.append(temp_receive_list)
+                    # print("in the loop")
+                    if sys.getsizeof(temp_receive_list) < length:
+                        break
+                except:
                     break
 
             receive_list = pickle.loads(b"".join(receive_list)) 
@@ -262,19 +285,21 @@ class TCP_server(object):
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
             sys.exit(0) # Exit program
-        except socket.error:
-            #print(e)
-            pass
+        # except socket.error:
+        #     #print(e)
+        #     pass
         except:
             traceback.print_exc()
             self.sock.close()
+            raise KeyboardInterrupt
+
+
 
     def send_string(self, message = ''):
         ''' Send string to target client'''
 
         try:
             self.connection[0].sendall(message.encode('utf-8') ) # Send message ( I forgot what's the return value of sendto() )
-
         except:
             self.sock.close()
             traceback.print_exc()
@@ -282,9 +307,7 @@ class TCP_server(object):
     def send_list(self, list = []):
         '''send list to target port (default IP is 127.0.0.1)'''
         try:
-
             self.connection[0].sendall(pickle.dumps(list))
-            
         except:
             self.close()
             traceback.print_exc()
@@ -305,9 +328,9 @@ class TCP_client(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.ip,self.port))
-        except Exception as e:
+        except:
             self.sock.close()
-            print(e)
+            traceback.print_exc()
             print('socket client fail initialize')
     
     def recv_string(self, length = 11):
@@ -320,10 +343,10 @@ class TCP_client(object):
             pass               # Do nothing and pass  , the return data is 'None' 
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
-            sys.exit(-0) # Exit program
-        except socket.error as e:
-            print(e)
-            pass
+            sys.exit(0) # Exit program
+        # except socket.error as e:
+        #     print(e)
+        #     pass
         except:
             traceback.print_exc()
             self.sock.close()
@@ -332,9 +355,12 @@ class TCP_client(object):
         try:
             receive_list = []
             while True:
-                temp_receive_list = self.sock.recv(length)
-                receive_list.append(temp_receive_list)
-                if sys.getsizeof(temp_receive_list) < length:
+                try:
+                    temp_receive_list = self.sock.recv(length)
+                    receive_list.append(temp_receive_list)
+                    if sys.getsizeof(temp_receive_list) < length:
+                        break
+                except:
                     break
 
             receive_list = pickle.loads(b"".join(receive_list)) 
@@ -346,12 +372,13 @@ class TCP_client(object):
         except KeyboardInterrupt: 
             self.sock.close() # Unbind socket from the adress
             sys.exit(0) # Exit program
-        except socket.error as e:
-            print(e)
-            pass
+        # except socket.error as e:
+        #     print(e)
+        #     pass
         except:
             traceback.print_exc()
             self.sock.close()
+            raise KeyboardInterrupt
 
     def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
         ''' Send string to target port (default IP is 127.0.0.1)'''
@@ -364,6 +391,7 @@ class TCP_client(object):
         except:
             self.sock.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
 
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
