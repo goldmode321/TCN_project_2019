@@ -87,8 +87,8 @@ import time
 import threading
 
 # client = TCN_socket.TCP_client(55555)
-# client = TCN_socket.TCP_server(55555,1)
-client = TCN_socket.UDP_server(55555,1)
+client = TCN_socket.TCP_server(55555,1)
+# client = TCN_socket.UDP_server(55555,1)
 global i
 i = 0
 
@@ -108,13 +108,13 @@ thread.start()
 while True:
     try:
         
-        # data = client.recv_list()
-        data = client.recv_string(1024)
+        data = client.recv_list()
+        # data = client.recv_string(1024)
         print('client get {} '.format(data))
         time.sleep(1)
         # client.send_list(['number of receive',i])
-        # client.send_list(['thread run',i])
-        client.send_string(str(['thread run',i]))
+        client.send_list(['thread run',i])
+        # client.send_string(str(['thread run',i]))
     except:
         client.close()
         break

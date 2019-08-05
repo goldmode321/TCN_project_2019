@@ -268,7 +268,7 @@ class TCP_server(object):
                         receive_list_flag = False
                 except:
                     receive_list_flag = False
-            print(receive_list)
+            # print(receive_list)
             if receive_list != [b''] and receive_list != []:
                 receive_list = pickle.loads(b"".join(receive_list)) 
                 return receive_list
