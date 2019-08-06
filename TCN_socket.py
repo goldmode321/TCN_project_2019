@@ -87,6 +87,7 @@ class UDP_server(object):
         except:
             self.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
 
 
 
@@ -97,6 +98,7 @@ class UDP_server(object):
         except:
             self.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
 
 
     def alive(self):
@@ -182,6 +184,8 @@ class UDP_client(object):
         except:
             self.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
+
 
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
@@ -190,6 +194,8 @@ class UDP_client(object):
         except :
             self.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
+
 
     def alive(self):
         return self.client_alive
@@ -304,17 +310,23 @@ class TCP_server(object):
         ''' Send string to target client'''
         try:
             self.connection[0].sendall(message.encode('utf-8') ) # Send message ( I forgot what's the return value of sendto() )
+        except BrokenPipeError:
+            raise KeyboardInterrupt
         except:
             self.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
 
     def send_list(self, list = []):
         '''send list to target port (default IP is 127.0.0.1)'''
         try:
             self.connection[0].sendall(pickle.dumps(list))        
+        except BrokenPipeError:
+            raise KeyboardInterrupt
         except:
             self.close()
             traceback.print_exc()
+            raise KeyboardInterrupt
 
 
     def alive(self):
