@@ -24,15 +24,17 @@ class UDP_server(object):
             self.sock.setblocking(self.setblocking)
             self.sock.bind((self.ip, self.port))
             print('Server initiate - '+ self.ip+ ' : '+ str(self.port))
+            self.recv_string()
 
-        except Exception as e:
+        except:
             self.sock.close()
             print('Cancel bind process \n\n')
-            print(e)
+            traceback.print_exc()
 
     def recv_string(self, length = 11):
         try:
-            receive_str = self.sock.recv(length).decode('utf-8')
+            receive_str,self.addr = self.sock.recvfrom(length)
+            receive_str = receive_str.decode('utf-8')
             return receive_str
         
         except socket.timeout: # if server didn't get any data in a period of time 
@@ -53,13 +55,14 @@ class UDP_server(object):
             receive_list = []
             while receive_list_flag:
                 try:
-                    temp_receive_list = self.connection[0].recv(length)
+                    temp_receive_list, self.addr = self.sock.recvfrom(length)
                     receive_list.append(temp_receive_list)
                     if sys.getsizeof(temp_receive_list) < length:
                         receive_list_flag = False
                 except:
                     receive_list_flag = False
-            if receive_list != [b'']:
+            print(receive_list)
+            if receive_list != [b''] and receive_list != []:
                 receive_list = pickle.loads(b"".join(receive_list)) 
                 return receive_list
         
@@ -78,26 +81,21 @@ class UDP_server(object):
 
             
 
-    def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
+    # def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
+    def send_string(self, message = ''):
         ''' Send string to target port (default IP is 127.0.0.1)'''
-
         try:
-            if port != self.port or ip != self.ip:
-                self.sock.sendto(message.encode('utf-8') ,(self.ip ,self.port) ) # Send message ( I forgot what's the return value of sendto() )
-            else:
-                self.sock.sendto(message.encode('utf-8') , (ip,port) )
+            self.sock.sendto(message.encode('utf-8') , self.addr ) # Send message ( I forgot what's the return value of sendto() )
         except:
             self.sock.close()
             traceback.print_exc()
 
+
+
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
         try:
-            if port != self.port or ip != self.ip:
-                self.sock.sendto(pickle.dumps(list) , (ip,port) )
-            else:
-                self.sock.sendto(pickle.dumps(list) , (self.ip, self.port) )
-                
+            self.sock.sendto(pickle.dumps(list) , self.addr)              
         except:
             self.sock.close()
             traceback.print_exc()
@@ -116,6 +114,7 @@ class UDP_client(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.setblocking(setblocking)
+            self.send_string('321')
         except:
             self.sock.close()
             traceback.print_exc()
@@ -124,6 +123,7 @@ class UDP_client(object):
     def recv_string(self, length = 11):
         try:
             receive_str = self.sock.recv(length).decode('utf-8')
+            print(receive_str)
             return receive_str
         
         except socket.timeout: # if server didn't get any data in a period of time 
@@ -143,13 +143,13 @@ class UDP_client(object):
             receive_list = []
             while receive_list_flag:
                 try:
-                    temp_receive_list = self.connection[0].recv(length)
+                    temp_receive_list = self.sock.recv(length)
                     receive_list.append(temp_receive_list)
                     if sys.getsizeof(temp_receive_list) < length:
                         receive_list_flag = False
                 except:
                     receive_list_flag = False
-            if receive_list != [b'']:
+            if receive_list != [b''] and receive_list != []:
                 receive_list = pickle.loads(b"".join(receive_list)) 
                 return receive_list
         
@@ -180,7 +180,7 @@ class UDP_client(object):
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
         try:
-            self.sock.sendto(pickle.dumps(list) , (ip,port) )
+            self.sock.sendto(pickle.dumps(list) , (self.ip, self.port) )
         except Exception as e:
             self.sock.close()
             print(e)
@@ -268,7 +268,8 @@ class TCP_server(object):
                         receive_list_flag = False
                 except:
                     receive_list_flag = False
-            if receive_list != [b'']:
+            # print(receive_list)
+            if receive_list != [b''] and receive_list != []:
                 receive_list = pickle.loads(b"".join(receive_list)) 
                 return receive_list
         
@@ -298,10 +299,11 @@ class TCP_server(object):
     def send_list(self, list = []):
         '''send list to target port (default IP is 127.0.0.1)'''
         try:
-            self.connection[0].sendall(pickle.dumps(list))
+            self.connection[0].sendall(pickle.dumps(list))        
         except:
             self.close()
             traceback.print_exc()
+
 
     def close(self):
         ''' Close server '''
@@ -355,7 +357,7 @@ class TCP_client(object):
                         receive_list_flag = False
                 except:
                     receive_list_flag = False
-            if receive_list != [b'']:
+            if receive_list != [b''] and receive_list != []:
                 receive_list = pickle.loads(b"".join(receive_list)) 
                 return receive_list
         
