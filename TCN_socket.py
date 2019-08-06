@@ -231,7 +231,8 @@ class TCP_server(object):
             self.sock.listen(1)
             self.connection = self.sock.accept()
             self.sock.close()
-            self.server_connection_file_descriptor = self.connection[0].fileno()
+            # self.server_connection_file_descriptor = self.connection[0].fileno()
+            # self.client_connection_file_descriptor = int(self.recv_string(32))
             self.server_alive = True
             # print('Client connected')
 
@@ -265,7 +266,6 @@ class TCP_server(object):
             traceback.print_exc()
             self.close()
             raise KeyboardInterrupt
-
 
 
     def recv_list(self, length = 4096):
@@ -340,6 +340,8 @@ class TCP_client(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.ip,self.port))
+            # self.client_connection_file_descriptor = self.sock.fileno()
+            # self.send_string(str(self.client_connection_file_descriptor))
         except:
             self.close()
             traceback.print_exc()
@@ -362,6 +364,7 @@ class TCP_client(object):
         except:
             traceback.print_exc()
             self.close()
+            
 
     def recv_list(self, length = 4096):
         try:
