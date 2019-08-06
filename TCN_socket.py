@@ -11,12 +11,10 @@ class UDP_server(object):
     ''' Class for socket server '''
 
     def __init__(self, port = 50000, setblocking = 0,ip = '127.0.0.1'):
+        self.server_alive = False
         self.port = port
         self.ip = ip
         self.setblocking = setblocking
-
-        # Send list method ( 'socket' or 'multi')
-        self.method = 'socket'
 
         # Create UDP server
         try:
@@ -25,9 +23,10 @@ class UDP_server(object):
             self.sock.bind((self.ip, self.port))
             print('Server initiate - '+ self.ip+ ' : '+ str(self.port))
             self.recv_string()
+            self.server_alive = True
 
         except:
-            self.sock.close()
+            self.close()
             print('Cancel bind process \n\n')
             traceback.print_exc()
 
@@ -40,14 +39,13 @@ class UDP_server(object):
         except socket.timeout: # if server didn't get any data in a period of time 
             pass               # Do nothing and pass  , the return data is 'None' 
         except KeyboardInterrupt: 
-            self.sock.close() # Unbind socket from the adress
+            self.close() # Unbind socket from the adress
             sys.exit(0) # Exit program
         except socket.error as e:
-            #print(e)
             pass
-        except Exception as e:
-            print(e)
-            self.sock.close()
+        except:
+            traceback.print_exc()
+            self.close()
 
     def recv_list(self, length = 4096):
         try:
@@ -87,7 +85,7 @@ class UDP_server(object):
         try:
             self.sock.sendto(message.encode('utf-8') , self.addr ) # Send message ( I forgot what's the return value of sendto() )
         except:
-            self.sock.close()
+            self.close()
             traceback.print_exc()
 
 
@@ -97,12 +95,18 @@ class UDP_server(object):
         try:
             self.sock.sendto(pickle.dumps(list) , self.addr)              
         except:
-            self.sock.close()
+            self.close()
             traceback.print_exc()
+
+
+    def alive(self):
+        return self.server_alive
+
 
     def close(self):
         ''' Close server '''
         self.sock.close()
+        self.server_alive = False
         # print('Server close without error')
 
 
@@ -111,12 +115,14 @@ class UDP_client(object):
     def __init__(self, port = 50000,setblocking = 0, ip='127.0.0.1'):
         self.port = port
         self.ip = ip
+        self.client_alive = False
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.setblocking(setblocking)
             self.send_string('321')
+            self.client_alive = True
         except:
-            self.sock.close()
+            self.close()
             traceback.print_exc()
             print('\nsocket client fail initialize')
     
@@ -129,8 +135,8 @@ class UDP_client(object):
         except socket.timeout: # if server didn't get any data in a period of time 
             pass               # Do nothing and pass  , the return data is 'None' 
         except KeyboardInterrupt: 
-            self.sock.close() # Unbind socket from the adress
-            sys.exit(-0) # Exit program
+            self.close() # Unbind socket from the adress
+            sys.exit(0) # Exit program
         except socket.error:
             pass
         except:
@@ -174,20 +180,24 @@ class UDP_client(object):
             else:
                 self.sock.sendto(message.encode('utf-8') , (ip,port) )
         except:
-            self.sock.close()
+            self.close()
             traceback.print_exc()
 
     def send_list(self, list = [], port=50000, ip = '127.0.0.1'):
         '''send list to target port (default IP is 127.0.0.1)'''
         try:
             self.sock.sendto(pickle.dumps(list) , (self.ip, self.port) )
-        except Exception as e:
-            self.sock.close()
-            print(e)
+        except :
+            self.close()
+            traceback.print_exc()
+
+    def alive(self):
+        return self.client_alive
 
     def close(self):
         ''' Close server '''
         self.sock.close()
+        self.client_alive = False
         # print('Client close without error')
 
     
@@ -212,6 +222,7 @@ class TCP_server(object):
         self.ip = ip
         self.setblocking = setblocking
         self.connection = None
+        self.server_alive = False
 
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -221,6 +232,7 @@ class TCP_server(object):
             self.connection = self.sock.accept()
             self.sock.close()
             self.server_connection_file_descriptor = self.connection[0].fileno()
+            self.server_alive = True
             # print('Client connected')
 
         except:
@@ -305,11 +317,16 @@ class TCP_server(object):
             traceback.print_exc()
 
 
+    def alive(self):
+        return self.server_alive
+
+
     def close(self):
         ''' Close server '''
         self.sock.close()
         if self.connection != None:
             self.connection[0].close()
+        self.server_alive = False
 
 
 
@@ -319,20 +336,21 @@ class TCP_client(object):
     def __init__(self, port = 50000, ip='127.0.0.1'):
         self.port = port
         self.ip = ip
+        self.client_alive = False
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.sock.connect((self.ip,self.port))
         except:
-            self.sock.close()
+            self.close()
             traceback.print_exc()
             print('socket client fail initialize')
     
+
+
     def recv_string(self, length = 11):
         try:
-            
             receive_str = self.sock.recv(length).decode('utf-8')
-            return receive_str
-        
+            return receive_str    
         except socket.timeout: # if server didn't get any data in a period of time 
             pass               # Do nothing and pass  , the return data is 'None' 
         except KeyboardInterrupt: 
@@ -343,7 +361,7 @@ class TCP_client(object):
         #     pass
         except:
             traceback.print_exc()
-            self.sock.close()
+            self.close()
 
     def recv_list(self, length = 4096):
         try:
@@ -402,9 +420,14 @@ class TCP_client(object):
             traceback.print_exc()
             raise KeyboardInterrupt
 
+    def alive(self):
+        return self.client_alive
+
+
     def close(self):
         ''' Close server '''
         self.sock.close()
+        self.client_alive = False
         # print('Client close without error')
 
 
