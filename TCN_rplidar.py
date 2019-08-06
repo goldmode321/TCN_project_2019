@@ -194,6 +194,7 @@ class Lidar_test_communication(object):
                 self.lidar_server.send_list(['L','exit'])
                 self.lidar_server_run_flag = False
                 time.sleep(0.2) # For sure that client close first
+                self.lidar_server.close()
 
 
 
