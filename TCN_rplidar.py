@@ -14,12 +14,14 @@ class Lidar(object):
         ###############
         self.lidar = None 
         self.lidar_client = None
+        self.lidar_thread_client = None
         self.lidar_run_flag = False
         self.lidar_data = []
         ###############
         try:
             logging.info("Initializing Lidar_client")
             self.lidar_client = TCN_socket.TCP_client(50002)
+            self.lidar_thread_client = TCN_socket.UDP_client(50004)
             self.lidar_scan_port()
             self.lidar_client.send_list(['L','status',str(self.lidar_state[0])])
             self.lidar_run_flag = True
@@ -29,7 +31,10 @@ class Lidar(object):
         except:
             traceback.print_exc()
             logging.exception("Got error\n")
-            self.lidar_client.close()
+            if self.lidar_client != None:
+                self.lidar_client.close()
+            if self.lidar_thread_client != None:
+                self.lidar_thread_client.close()
 
 
 
@@ -67,7 +72,7 @@ class Lidar(object):
                         
                     else:
                         self.lidar_client.send_list(['L','gld',"No lidar data"])
-
+ 
             else:
                 logging.warning("Wrong portocol to Lidar communication , please check lidar_portocol or bridge protocol")
         except:
@@ -138,6 +143,7 @@ class Lidar(object):
         try:
             for scan in self.lidar.iter_scans():
                 self.lidar_data = scan
+                self.lidar_thread_client.send_list(self.lidar_data)
         except:
             self.reconnect()
             self.get_lidar_data()
@@ -149,14 +155,18 @@ class Lidar(object):
 
 
 class Lidar_test_communication(object):
+    
     def __init__(self):
         try:
             self.lidar_server_run_flag = False
+            self.lidar_thread_server_run_flag = False
             self.lidar_server = TCN_socket.TCP_server(50002,1)
+            self.lidar_thread_server = TCN_socket.UDP_server(50004)
             self.lidar_data = self.lidar_server.recv_list()
             if self.lidar_data == ['L','status','Good']:
                 print('Lidar connected')
                 self.lidar_server_run_flag = True
+                self.lidar_thread_server_run_flag = True
                 self.main()
             else:
                 print('Undefined communication error of Vision module, please check test message')
@@ -167,6 +177,7 @@ class Lidar_test_communication(object):
             self.lidar_server.close()
 
     def main(self):
+        self.server_run_background()
         while self.lidar_server_run_flag:
             try:
                 command = input('Server command : ')
@@ -176,7 +187,18 @@ class Lidar_test_communication(object):
                 self.lidar_server_run_flag = False
         
         self.lidar_server.close()
+        self.lidar_thread_server.close()
         # time.sleep(1)
+
+    def get_lidar_data_background(self):
+        while self.lidar_thread_server_run_flag:
+            if self.lidar_thread_server.server_alive:
+                self.temp_lidar_data = self.lidar_thread_server.recv_list()
+                time.sleep(0.2)
+
+    def server_run_background(self):
+        thread = threading.Thread(target = self.get_lidar_data_background ,daemon = True)
+        thread.start()
 
                 
     def potorcol(self,command):
