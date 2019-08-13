@@ -7,6 +7,7 @@ import threading
 
 class Lidar(object):
 
+
     def __init__(self):
         logging.basicConfig(filename='LiDAR.log',filemode = 'w',level =logging.INFO)
         logging.info("Initializing RPLidar")
@@ -37,7 +38,6 @@ class Lidar(object):
                 self.lidar_thread_client.close()
 
 
-
     def lidar_main(self):
         self.lidar_run_background()
         while self.lidar_run_flag:
@@ -46,14 +46,12 @@ class Lidar(object):
                 logging.info("lidar received : {} ".format(lidar_receive))
                 self.lidar_protocol(lidar_receive)
 
+
             except:
                 traceback.print_exc()
                 logging.exception('Got error : ')
                 self.lidar_run_flag = False   
-        # self.lidar.stop()
-        # self.lidar_client.close()
-        # time.sleep(1)        
-
+       
 
 
     def lidar_protocol(self,lidar_receive):
@@ -68,11 +66,11 @@ class Lidar(object):
                 elif lidar_receive[1] == 'gld':
                     logging.debug("lidar data {}".format( self.lidar_data))
                     if self.lidar_data != None:
-                        self.lidar_client.send_list(['L','gld', self.lidar_data])
-                        
+                        self.lidar_client.send_list(['L','gld', self.lidar_data])                        
                     else:
                         self.lidar_client.send_list(['L','gld',"No lidar data"])
  
+
             else:
                 logging.warning("Wrong portocol to Lidar communication , please check lidar_portocol or bridge protocol")
         except:
@@ -85,9 +83,11 @@ class Lidar(object):
         thread = threading.Thread(target = self.get_lidar_data ,daemon = True)
         thread.start()
 
+
 #=============================================#
 #                   Liberary                  #
 #=============================================#
+
 
     def lidar_scan_port(self):
         self.lidar_scanning_flag = True
@@ -95,7 +95,6 @@ class Lidar(object):
         logging.info('Scanning RPLidar port')
         while self.lidar_scanning_flag:
             try:
-
                 self.lidar_USB_port = '/dev/ttyUSB'+str(self.initial_scanning_port_num)
                 logging.info('Scanning '+self.lidar_USB_port)
                 self.lidar = rplidar.RPLidar(self.lidar_USB_port)
@@ -148,14 +147,11 @@ class Lidar(object):
             self.reconnect()
             self.get_lidar_data()
 
-    
-        
-
-
 
 
 class Lidar_test_communication(object):
-    
+
+
     def __init__(self):
         try:
             self.lidar_data = []
@@ -172,11 +168,11 @@ class Lidar_test_communication(object):
                 self.main()
             else:
                 print('Undefined communication error of Vision module, please check test message')
-
                 raise KeyboardInterrupt      
         except:
             traceback.print_exc()
             self.lidar_server.close()
+
 
     def main(self):
         self.server_run_background()
@@ -190,7 +186,7 @@ class Lidar_test_communication(object):
         
         self.lidar_server.close()
         self.lidar_thread_server.close()
-        # time.sleep(1)
+
 
     def get_lidar_data_background(self):
         while self.lidar_thread_server_run_flag:
@@ -206,32 +202,33 @@ class Lidar_test_communication(object):
 
                 
     def potorcol(self,command):
-
         try:
             if command == None:
                 print('socket got problem')
-  
+                
+
+
             elif command == 'gld':
                 self.lidar_server.send_list(['L','gld'])
                 receive = self.lidar_server.recv_list()
                 print(receive[2])
 
+
             elif command == 'gld2':
                 print(self.lidar_data)
+
 
             elif command == 'exit':
                 self.lidar_server.send_list(['L','exit'])
                 self.lidar_server_run_flag = False
                 time.sleep(0.2) # For sure that client close first
                 self.lidar_server.close()
-
-
-
+            
+            
             else:
                 print('{} received . Wrong potorcol  !'.format(command))
-                
-                
-
+        
+        
         except:
             self.lidar_server.close()
             traceback.print_exc()
@@ -240,4 +237,3 @@ class Lidar_test_communication(object):
 if __name__ == "__main__":
     Lidar()
 
-        
