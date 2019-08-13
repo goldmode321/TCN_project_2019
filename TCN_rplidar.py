@@ -158,12 +158,14 @@ class Lidar_test_communication(object):
     
     def __init__(self):
         try:
+            self.lidar_data = []
+            self.lidar_receive = []
             self.lidar_server_run_flag = False
             self.lidar_thread_server_run_flag = False
             self.lidar_server = TCN_socket.TCP_server(50002,1)
             self.lidar_thread_server = TCN_socket.UDP_server(50004)
-            self.lidar_data = self.lidar_server.recv_list()
-            if self.lidar_data == ['L','status','Good']:
+            self.lidar_receive = self.lidar_server.recv_list()
+            if self.lidar_receive == ['L','status','Good']:
                 print('Lidar connected')
                 self.lidar_server_run_flag = True
                 self.lidar_thread_server_run_flag = True
@@ -193,8 +195,10 @@ class Lidar_test_communication(object):
     def get_lidar_data_background(self):
         while self.lidar_thread_server_run_flag:
             if self.lidar_thread_server.server_alive:
-                self.temp_lidar_data = self.lidar_thread_server.recv_list()
-                time.sleep(0.2)
+                temp_lidar_data = self.lidar_thread_server.recv_list()
+                if temp_lidar_data:
+                    self.lidar_data = temp_lidar_data
+            time.sleep(0.2)
 
     def server_run_background(self):
         thread = threading.Thread(target = self.get_lidar_data_background ,daemon = True)
@@ -213,7 +217,7 @@ class Lidar_test_communication(object):
                 print(receive[2])
 
             elif command == 'gld2':
-                print(self.temp_lidar_data)
+                print(self.lidar_data)
 
             elif command == 'exit':
                 self.lidar_server.send_list(['L','exit'])
