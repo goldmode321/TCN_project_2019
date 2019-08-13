@@ -212,6 +212,9 @@ class Lidar_test_communication(object):
                 receive = self.lidar_server.recv_list()
                 print(receive[2])
 
+            elif command == 'gld2':
+                print(self.temp_lidar_data)
+
             elif command == 'exit':
                 self.lidar_server.send_list(['L','exit'])
                 self.lidar_server_run_flag = False
