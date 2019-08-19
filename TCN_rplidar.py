@@ -191,7 +191,7 @@ class Lidar_test_communication(object):
     def get_lidar_data_background(self):
         while self.lidar_thread_server_run_flag:
             if self.lidar_thread_server.server_alive:
-                temp_lidar_data = self.lidar_thread_server.recv_list()
+                temp_lidar_data = self.lidar_thread_server.recv_list(65536)
                 if temp_lidar_data:
                     self.lidar_data = temp_lidar_data
             time.sleep(0.2)
@@ -221,6 +221,7 @@ class Lidar_test_communication(object):
             elif command == 'exit':
                 self.lidar_server.send_list(['L','exit'])
                 self.lidar_server_run_flag = False
+                self.lidar_thread_server_run_flag = False
                 time.sleep(0.2) # For sure that client close first
                 self.lidar_server.close()
             
