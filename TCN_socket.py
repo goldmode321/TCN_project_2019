@@ -59,7 +59,7 @@ class UDP_server(object):
                         receive_list_flag = False
                 except:
                     receive_list_flag = False
-            print(receive_list)
+            # print(receive_list)
             if receive_list != [b''] and receive_list != []:
                 receive_list = pickle.loads(b"".join(receive_list)) 
                 return receive_list
@@ -121,7 +121,6 @@ class UDP_client(object):
         try:
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.setblocking(setblocking)
-            self.send_string('321')
             self.client_alive = True
         except:
             self.close()
@@ -131,7 +130,7 @@ class UDP_client(object):
     def recv_string(self, length = 11):
         try:
             receive_str = self.sock.recv(length).decode('utf-8')
-            print(receive_str)
+            # print(receive_str)
             return receive_str
         
         except socket.timeout: # if server didn't get any data in a period of time 
