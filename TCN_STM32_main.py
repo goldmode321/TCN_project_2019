@@ -104,9 +104,9 @@ class STM32_command(object):
 
     def move(self, car = [0,0,0]):
         ''' move car ,car = [x ,y ,z, mode ] , mode = 0 position mode ; mode = 1 velocity mode '''
-        car = limit_maximum_value(car)
-        dir_byte = reverse_or_not(car)
-        coords = change_to_hex(car)
+        car = self.limit_maximum_value(car)
+        dir_byte = self.reverse_or_not(car)
+        coords = self.change_to_hex(car)
         self.ser.write([0xFF,0xFE, 1, coords[0] , coords[1] , coords[2] , coords[3] , coords[4] , coords[5] , dir_byte , coords[6] , coords[7] ])
 
     def stop(self):
@@ -129,7 +129,7 @@ class STM32_command(object):
 ################################################################################
 ################################################################################
 
-    def change_to_hex(car):
+    def change_to_hex(self,car):
         ''' Change the value of x, y, z into hex to satisfy the protocol of STM32 controller '''
         xhh = int(abs(car[0])/65536)
         xh = int((abs(car[0])%65536)/256)
@@ -142,7 +142,7 @@ class STM32_command(object):
 
         return xh,xl,yh,yl,zh,zl,xhh,yhh
 
-    def limit_maximum_value(car): 
+    def limit_maximum_value(self,car): 
         ''' This function limit the value of x,y,z '''
         if car[0] >= 16777215:
             car[0] = 16777215
@@ -160,7 +160,7 @@ class STM32_command(object):
             car[2] = -16777215
         return car
 
-    def reverse_or_not(car):
+    def reverse_or_not(self,car):
         ''' This generate direction byte for STM32 depends on the direction of x,y,z'''
 
         #Direction X
@@ -183,6 +183,78 @@ class STM32_command(object):
 
 
 
+class STM32_Test_Communication:
+    def __init__(self):
+        try:
+            self.main_flag = False
+
+            import TCN_xbox
+            import os
+            if os.getuid() != 0:
+                print('please Run with sudo')
+                sys.exit(0)
+            self.xbox = TCN_xbox.xbox_controller()
+            self.stm32_server = TCN_socket.TCP_server(50003,1)
+            stm32_data = self.stm32_server.recv_list()
+            bridge_potorcol(stm32_data)
+            self.main_flag = True
+            self.main()
+        except:
+            self.stm32_server.close()
+            traceback.print_exc()
+            print('Bridge initializing fail at stm32_init()')
+
+
+    def main(self):
+        while self.main_flag:
+            try:
+                command = input('command')
+                if command == 'exit':
+                    stm32_server.send_list(['S','exit'])
+                    print('All server will be close in 3 second')
+                    time.sleep(3)
+                    stm32_server.close()
+                    self.main_flag = False
+                    
+                elif command == 'mwx':
+                    while not xbox.joy.Back():
+                        move_command = self.xbox.xbox_control()
+                        stm32_server.send_list(['S','move',move_command])
+                        command = stm32_server.recv_list()
+                        self.bridge_potorcol(command)
+                elif command == 'cm':
+                    x = int(input('velocity x '))
+                    y = int(input('velocity y '))
+                    z = int(input('velocity y '))
+                    if x == None:
+                        x = 0   
+                    if y == None:
+                        y = 0 
+                    if z == None:
+                        z = 0 
+                    stm32_server.send_list(['S','move',[x,y,z]])
+                    command = stm32_server.recv_list()
+                    self.bridge_potorcol(command)
+
+                elif command == 'stop':
+                    stm32_server.send_list(['S','stop'])
+
+                else:
+                    print('{} received . Wrong potorcol  !'.format(command))
+            except:
+                self.stm32_server.send_list(['S','exit'])
+                time.sleep(0.3)
+                self.stm32_server.close()
+                self.main_flag = False
+                traceback.print_exc()
+
+    def bridge_potorcol(self,receive_data):
+        if receive_data[0] == 'S':
+            if receive_data[1] == 'next':
+                pass
+
+
+
 def init():
     global stm32,stm32_client,keep_running
     try:
@@ -191,16 +263,6 @@ def init():
         logging.info('Successfully connect to STM32 , port : {} \n'.format(stm32.USB_port_PATH))
         stm32_client = TCN_socket.TCP_client(50003)
         logging.info('STM32 communication established\n')
-        # stm32_client.send_list(['S',1,2,3])
-        # logging.info("Test connection to communication center,['S',1,2,3'] sent, ['S','T','M',3,2] should be received\n")
-        # data_get = stm32_client.recv_list()
-        # if data_get == ['S','T','M',3,2]:
-        #     keep_running = True
-        #     logging.info("['S','T','M',3,2] received , connection test complete. Program start\n")
-        # else:
-        #     keep_running = False
-        #     print('Something wrong for connection check, wrong potorcol')
-        #     logging.info(str(data_get)+" . Wrong potorcol, please check TCN_bridge.py , STM32 initial section ; And check TCN_STM32_main.py\n")
         stm32_client.send_list(['S','next'])
         keep_running = True
     except:
