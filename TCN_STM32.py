@@ -28,13 +28,14 @@ class STM32_command(object):
     def __init__(self, USB_port_path = "/dev/ttyUSB",AUTO_DETECT_PORT = True, USB_port_num = 0, baudrate = 115200, timeout =1):
         '''When "STM32_command" is called, this function automatically run'''
         # Initial parameters 
-        logging.basicConfig(filename='STM32_main.log',filemode = 'a',level =logging.INFO)
+        logging.basicConfig(filename='STM32_main.log',filemode = 'w',level =logging.INFO)
         self.USB_port_num = USB_port_num # Initial port to scan (0)
         self.USB_port_path = USB_port_path # Default raspbian tty path is "/dev/ttyUSB"
         self.USB_port_PATH = self.USB_port_path + str(self.USB_port_num) # Full path for scanning USB
         
         self.baudrate = baudrate # Baudrate for STM32 is 115200. If STM32 configuration changed, this should be change,too
         self.timeout = timeout # How long to wait for USB responses.
+
 
         # Initial process
         self.STM32_power = STM32_power()
@@ -44,7 +45,39 @@ class STM32_command(object):
         else:
             self.ser = serial.Serial(self.USB_port_PATH, self.baudrate,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
         self.ser.write([0xFF,0xFE, 1, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ])
+        self.init()
 
+
+    def init(self):
+        try:
+            logging.info('Successfully connect to STM32 , port : {} \n'.format(self.USB_port_PATH))
+            self.stm32_client = TCN_socket.TCP_client(50003)
+            logging.info('STM32 communication established\n')
+            self.stm32_client.send_list(['S','next'])
+            self.keep_running = True
+            self.main()
+        except:
+            traceback.print_exc()
+            logging.exception("Got error\n")
+            self.stm32_client.close()
+
+    def main(self):
+        while self.keep_running:
+            try:
+                data_get = self.stm32_client.recv_list()
+                logging.info('Command in : {} \n'.format(data_get))
+                self.stm32_portocol(data_get)
+            except:
+                traceback.print_exc()
+                logging.exception("Got error \n")
+                self.stm32_client.close()
+                self.keep_running = False
+
+    def end(self):
+        self.stm32_client.close()
+        self.off()
+        logging.info('STM32 is off \n')
+        sys.exit(0)        
 
 
     def auto_detect_port(self):
@@ -129,6 +162,25 @@ class STM32_command(object):
 ################################################################################
 ################################################################################
 
+    def stm32_portocol(self,data_get):
+        if data_get[0] == 'S':
+            if data_get[1] == 'exit':
+                self.keep_running = False
+                logging.info(" 'exit' command received, start terminating program\n")
+            elif data_get[1] == 'move':            
+                self.move(data_get[2])
+                self.stm32_client.send_list(['S','next'])
+                logging.info(" 'move' command received, movie with "+str(data_get[2])+'\n')
+            elif data_get[1] == 'stop':
+                self.move([0,0,0])
+                logging.info(" 'stop' command received, movie with "+str([0,0,0])+'\n')
+        
+        else:
+            print(str(data_get)+" received by STM32. Wrong potorcol ! ")
+            logging.info(str(data_get)+" received by STM32. Wrong potorcol, please check TCN_bridge.py \n")
+
+
+
     def change_to_hex(self,car):
         ''' Change the value of x, y, z into hex to satisfy the protocol of STM32 controller '''
         xhh = int(abs(car[0])/65536)
@@ -196,10 +248,11 @@ class STM32_Test_Communication:
             self.xbox = TCN_xbox.xbox_controller()
             self.stm32_server = TCN_socket.TCP_server(50003,1)
             stm32_data = self.stm32_server.recv_list()
-            bridge_potorcol(stm32_data)
+            self.bridge_potorcol(stm32_data)
             self.main_flag = True
             self.main()
         except:
+            time.sleep(0.3)
             self.stm32_server.close()
             traceback.print_exc()
             print('Bridge initializing fail at stm32_init()')
@@ -210,18 +263,18 @@ class STM32_Test_Communication:
             try:
                 command = input('command')
                 if command == 'exit':
-                    stm32_server.send_list(['S','exit'])
+                    self.stm32_server.send_list(['S','exit'])
                     print('All server will be close in 3 second')
                     time.sleep(3)
-                    stm32_server.close()
+                    self.stm32_server.close()
                     self.main_flag = False
                     
                 elif command == 'mwx':
-                    while not xbox.joy.Back():
+                    while not self.xbox.joy.Back():
                         move_command = self.xbox.xbox_control()
-                        stm32_server.send_list(['S','move',move_command])
-                        command = stm32_server.recv_list()
-                        self.bridge_potorcol(command)
+                        self.stm32_server.send_list(['S','move',move_command])
+                        receive = self.stm32_server.recv_list()
+                        self.bridge_potorcol(receive)
                 elif command == 'cm':
                     x = int(input('velocity x '))
                     y = int(input('velocity y '))
@@ -232,12 +285,12 @@ class STM32_Test_Communication:
                         y = 0 
                     if z == None:
                         z = 0 
-                    stm32_server.send_list(['S','move',[x,y,z]])
-                    command = stm32_server.recv_list()
-                    self.bridge_potorcol(command)
+                    self.stm32_server.send_list(['S','move',[x,y,z]])
+                    receive = self.stm32_server.recv_list()
+                    self.bridge_potorcol(receive)
 
                 elif command == 'stop':
-                    stm32_server.send_list(['S','stop'])
+                    self.stm32_server.send_list(['S','stop'])
 
                 else:
                     print('{} received . Wrong potorcol  !'.format(command))
@@ -322,6 +375,7 @@ def end():
     sys.exit(0)
 
 if __name__ == "__main__":
-    init()
-    main()
-    end()
+    # init()
+    # main()
+    # end()
+    STM32_command()
