@@ -32,9 +32,9 @@ class STM32_command(object):
         self.USB_PORT_NUM = USB_port_num # Initial port to scan (0)
         self.USB_port_path = USB_port_path # Default raspbian tty path is "/dev/ttyUSB"
         self.USB_PORT_PATH = self.USB_port_path + str(self.USB_PORT_NUM) # Full path for scanning USB
-        
         self.BAUDRATE = baudrate # Baudrate for STM32 is 115200. If STM32 configuration changed, this should be change,too
         self.timeout = timeout # How long to wait for USB responses.
+        self.KEEP_RUNNING = False
 
 
         # Initial process
@@ -51,6 +51,7 @@ class STM32_command(object):
         self.init_socket()
         self.main()
         self.end()
+        self.end_background_thread()
 
     def init_socket(self):
         try:
@@ -64,35 +65,40 @@ class STM32_command(object):
             traceback.print_exc()
             logging.exception("Got error\n")
             self.end()
+            self.end_background_thread()
 
 
 
     def main(self):
-        self.backgound_communication()
+        self.start_backgound_thread()
         while self.KEEP_RUNNING:
             try:
                 data_get = self.STM32_CLIENT.recv_list()
-                logging.info('Command in : {} \n'.format(data_get))
+                # logging.info('Command in : {} \n'.format(data_get))
                 self.stm32_portocol(data_get)
             except:
                 traceback.print_exc()
                 logging.exception("Got error \n")
                 self.KEEP_RUNNING = False
                 self.end()
+                self.end_background_thread()
         
 
     def end(self):
         self.STM32_CLIENT.close()
         self.off()
         logging.info('STM32 is off \n')
+
+    def end_background_thread(self):
         self.STM32_BACKGROUND_CLIENT.send_list([self.USB_PORT_PATH,self.KEEP_RUNNING,self.PIN_CHECK])
         self.STM32_BACKGROUND_CLIENT.close()
         # sys.exit()        
 
 
-    def backgound_communication(self):
+    def start_backgound_thread(self):
         logging.info('Backgound thread started')
-        threading.Thread(target = self.send_status , daemon = True)
+        THREAD = threading.Thread(target = self.send_status , daemon = True)
+        THREAD.start()
 
     
     def send_status(self):
@@ -194,6 +200,12 @@ class STM32_command(object):
             elif data_get[1] == 'stop':
                 self.move([0,0,0])
                 logging.info(" 'stop' command received, movie with "+str([0,0,0])+'\n')
+            elif data_get[1] == 'power_off':
+                self.off()
+                logging.info(" '{}' command received, power off stm32")
+            elif data_get[1] == 'power_on':
+                self.on()
+                logging.info(" '{}' command received, power on stm32")
         
         else:
             print(str(data_get)+" received by STM32. Wrong potorcol ! ")
@@ -273,7 +285,7 @@ class STM32_Test_Communication:
             import TCN_xbox
             import os
             if os.getuid() != 0:
-                print('please Run with sudo')
+                print('please Run with sudo\n\n')
                 sys.exit(0)
             self.xbox = TCN_xbox.xbox_controller()
             self.STM32_SERVER = TCN_socket.TCP_server(50003,1)
@@ -293,14 +305,25 @@ class STM32_Test_Communication:
         self.bridge_background_thread()
         while self.MAIN_FLAG:
             try:
-                command = input('command')
+                command = input("command or press 'h' for help : ")
                 if command == 'exit':
                     self.STM32_SERVER.send_list(['S','exit'])
                     print('All server will be close in 3 second')
                     self.MAIN_FLAG = False
                     time.sleep(3)
                     self.STM32_SERVER.close()
-                    
+                elif command == 'pf':
+                    if self.STM32_POWER == 1:
+                        self.STM32_SERVER.send_list(['S','power_off'])
+                    else:
+                        print('STM32 already power off')
+                elif command == 'po':
+                    if self.STM32_POWER == 0:
+                        self.STM32_SERVER.send_list(['S','power_on'])
+                    else:
+                        print('STM32 already power on')
+
+
                 elif command == 'mwx':
                     while not self.xbox.joy.Back():
                         move_command = self.xbox.xbox_control()
@@ -328,6 +351,12 @@ class STM32_Test_Communication:
                     print('stm32 power : {} '.format(self.STM32_POWER))
                     print('stm32 USB : {}'.format(self.USB_PORT_PATH))
                     print('stm32 run : {} '.format(self.STM32_PROGRAM_RUN))
+                elif command == 'h':
+                    print('exit   : quit all')
+                    print('status : get stm32 info')
+                    print('mwx    : move with xbox controller')
+                    print('cm     : enter x,y,z velocity, machine keep moving in that direction')
+                    print("stop   : stop motor")
 
                 else:
                     print('{} received . Wrong potorcol  !'.format(command))
@@ -346,7 +375,7 @@ class STM32_Test_Communication:
 
 
     def get_status(self):
-        print('thread run')
+        # print('thread run')
         while self.MAIN_FLAG:
             STM32_STATUS = self.STM32_BACKGROUND_SERVER.recv_list(8192)
             if STM32_STATUS != None:
