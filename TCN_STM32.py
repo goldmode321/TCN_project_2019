@@ -184,6 +184,9 @@ class STM32_command(object):
             if data_get[1] == 'exit':
                 self.KEEP_RUNNING = False
                 logging.info(" 'exit' command received, start terminating program\n")
+            elif data_get[1] == 'xbox_move':            
+                self.move(data_get[2])
+                self.STM32_CLIENT.send_list(['S','next'])
             elif data_get[1] == 'move':            
                 self.move(data_get[2])
                 self.STM32_CLIENT.send_list(['S','next'])
@@ -263,6 +266,9 @@ class STM32_Test_Communication:
     def __init__(self):
         try:
             self.MAIN_FLAG = False
+            self.USB_PORT_PATH = 0
+            self.STM32_PROGRAM_RUN = 0
+            self.STM32_POWER = 0
 
             import TCN_xbox
             import os
@@ -298,7 +304,7 @@ class STM32_Test_Communication:
                 elif command == 'mwx':
                     while not self.xbox.joy.Back():
                         move_command = self.xbox.xbox_control()
-                        self.STM32_SERVER.send_list(['S','move',move_command])
+                        self.STM32_SERVER.send_list(['S','xbox_move',move_command])
                         receive = self.STM32_SERVER.recv_list()
                         self.bridge_potorcol(receive)
                 elif command == 'cm':
@@ -327,6 +333,7 @@ class STM32_Test_Communication:
                     print('{} received . Wrong potorcol  !'.format(command))
             except:
                 self.STM32_SERVER.send_list(['S','exit'])
+                self.xbox.close()
                 time.sleep(0.3)
                 self.STM32_SERVER.close()
                 self.MAIN_FLAG = False
@@ -342,7 +349,7 @@ class STM32_Test_Communication:
         print('thread run')
         while self.MAIN_FLAG:
             STM32_STATUS = self.STM32_BACKGROUND_SERVER.recv_list(8192)
-            if STM32_STATUS:
+            if STM32_STATUS != None:
                 self.USB_PORT_PATH = STM32_STATUS[0]
                 self.STM32_PROGRAM_RUN = STM32_STATUS[1]
                 self.STM32_POWER = STM32_STATUS[2]
