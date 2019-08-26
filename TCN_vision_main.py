@@ -3,13 +3,141 @@
 
 
 import TCN_socket
-import __future__
-import xbox
 import sys, time
 import xmlrpc.client as xmlrpclib
 import math
 import traceback
+import threading
 import logging
+import TCN_gpio
+
+class Vision:
+    def __init__(self,AUTO_START = True , ip = '192.168.5.100'):
+        self.IP = ip
+        self.VISION_RUN = False
+        self.VISION_THREAD_RUN = False
+        if AUTO_START:
+            self.run()
+
+    def run(self):
+        self.init()
+        self.start_background_thread()
+        self.main()
+        self.end()
+        self.end_thread()
+
+    def init(self):
+        try:
+            logging.basicConfig(filename='Vision_main.log',filemode = 'w',level =logging.INFO)
+            self.VISION = xmlrpclib.ServerProxy("http://{}:8080".format(self.IP))
+            self.VISION_THREAD_CLIENT = TCN_socket.UDP_client(50006)
+            self.VISION_CLIENT = TCN_socket.TCP_client(50001)
+            if self.VISION.alive() == [0,'Alive']:
+                logging.info('Connection to Vision module establiished , Vision module status : {}\n'.format(vision_module.alive()))
+                self.VISION_CLIENT.send_list(['V','status','Alive'])
+                self.VISION_RUN = True
+                self.VISION_THREAD_RUN = True
+            else:
+                logging.info('Vision module is not Alive\n')
+                raise KeyboardInterrupt            
+        except:
+            self.end()
+            self.end_thread()
+            traceback.print_exc()
+            logging.exception('Got error : ')
+
+    def main(self):
+        while self.VISION_RUN:
+            try:
+                vision_receive = self.VISION_CLIENT.recv_list()
+                logging.info('Command in : {} \n'.format(vision_receive))
+                self.vision_portocol(vision_receive)
+            except:
+                traceback.print_exc()
+                self.VISION_RUN = False
+                self.VISION_THREAD_RUN = False
+                logging.exception('Got error : \n')
+                self.end()
+                self.end_thread()
+
+    def start_background_thread(self):
+        THREAD = threading.Thread(target = self.send_vision_status , daemon = True)
+        THREAD.start()
+        logging.info('Thread running')
+
+    def send_vision_status(self):
+        while self.VISION_RUN:
+            status = self.VISION.get_status()
+            pose = self.VISION.get_pose()
+            self.status = status[0]
+            self.x = pose[2]
+            self.y = pose[3]
+            self.theta = pose[4]
+            self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
+            time.sleep(0.2)
+
+
+    def vision_portocol(self,vision_receive):
+        if vision_receive[0] == 'V':
+            if vision_receive[1] == 'exit':
+                self.VISION_RUN = False
+                logging.info(" 'exit' command received, start terminating program\n")
+            elif vision_receive[1] == 'al':
+                alive_resp = self.VISION.alive()
+                print( 'alive(), response: {}'.format(alive_resp) )
+            elif vision_receive[1] == 'cc':
+                cc_resp = self.VISION.check_cpu_speed()
+                print( 'get_att(), response: {}'.format(cc_resp) )                    
+            elif vision_receive[1] == 'gp':
+                pose_resp = self.VISION.get_pose()
+                print( 'get_pose(), response: {}'.format(pose_resp) )
+            elif vision_receive[1] == 'gs':
+                status_resp = self.VISION.get_status()
+                print( 'get_status(), response: {}'.format(status_resp) )  
+            elif vision_receive[1] == 'sv':
+                save_resp = self.VISION.save_db()
+                print( 'save_db(), response: {}'.format(save_resp) )
+            elif (vision_receive[1] == 'rs'):
+                reset_resp = self.VISION.reset()
+                print( 'reset(), response: {}'.format(reset_resp) )
+            elif vision_receive[1] == 'bm': # Build map
+                if vision_receive[2] != None:
+                    start_resp = self.VISION.set_start(1,vision_receive[2])
+                    print( 'set_start(), response: {}'.format(start_resp) )
+                    logging.info("'Build map' command received , mapid : {} ".format(vision_receive[2])) 
+                else:
+                    print("'Build map' command received , but no mapid")
+                    logging.info("'Build map' command received , but no mapid") 
+            elif vision_receive[1] == 'um': # Use map
+                if vision_receive[2] != None:
+                    start_resp = self.VISION.set_start(0,vision_receive[2])
+                    print( 'set_start(), response: {}'.format(start_resp) )
+                    logging.info("'Use map' command received , mapid : {} ".format(vision_receive[2])) 
+                else:
+                    print("'Use map' command received , but no mapid")
+                    logging.info("'Use map' command received , but no mapid") 
+            elif vision_receive[1] == 'kbm': # Keep building map
+                if vision_receive[2] != None:
+                    start_resp = self.VISION.set_start(2,vision_receive[2])
+                    print( 'set_start(), response: {}'.format(start_resp) )
+                    logging.info("'Keep build map' command received , mapid : {} ".format(vision_receive[2])) 
+                else:
+                    print("'Keep build map' command received , but no mapid")
+                    logging.info("'Build map' command received , but no mapid") 
+
+
+        else:
+            print(str(vision_receive)+" received by vision module. Wrong potorcol ! ")
+
+
+    def end(self):
+        self.VISION_RUN = False
+        self.VISION_CLIENT.close()
+        logging.info(" Vision module disconnect \n")
+
+    def end_background_thread(self):
+        self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
+        self.VISION_THREAD_CLIENT.close()
 
 # Initial parameters
 vision_module = None
@@ -44,7 +172,6 @@ def vision_portocol(vision_receive):
             vision_run = False
             logging.info(" 'exit' command received, start terminating program\n")
 
-    
     else:
         print(str(vision_receive)+" received by vision module. Wrong potorcol ! ")
 
