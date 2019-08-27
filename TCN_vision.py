@@ -16,6 +16,7 @@ class Vision:
         self.IP = ip
         self.VISION_RUN = False
         self.VISION_THREAD_RUN = False
+        self.RESET_FALG = False
         if AUTO_START:
             self.run()
 
@@ -50,7 +51,7 @@ class Vision:
         while self.VISION_RUN:
             try:
                 vision_receive = self.VISION_CLIENT.recv_list()
-                logging.info('Command in : {} \n'.format(vision_receive))
+                logging.info('Command in : {} '.format(vision_receive))
                 self.vision_portocol(vision_receive)
             except:
                 traceback.print_exc()
@@ -67,13 +68,18 @@ class Vision:
 
     def send_vision_status(self):
         while self.VISION_RUN:
-            status = self.VISION.get_status()
-            pose = self.VISION.get_pose()
-            self.status = status[0]
-            self.x = pose[2]
-            self.y = pose[3]
-            self.theta = pose[4]
-            self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
+            if self.RESET_FALG == True:
+                time.sleep(4.8)
+                self.RESET_FALG = False
+            else:
+                status = self.VISION.get_status()
+                pose = self.VISION.get_pose()
+                self.status = status[0]
+                self.x = pose[3]
+                self.y = pose[4]
+                self.theta = pose[5]
+                # print(sys.getsizeof([self.x , self.y , self.theta , self.status , self.VISION_RUN]))
+                self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
             time.sleep(0.15)
 
 
@@ -98,11 +104,13 @@ class Vision:
                 save_resp = self.VISION.save_db()
                 print( 'save_db(), response: {}'.format(save_resp) )
             elif (vision_receive[1] == 'rs'):
+                self.RESET_FALG = True
+                time.sleep(0.2)
                 reset_resp = self.VISION.reset()
                 print( 'reset(), response: {}'.format(reset_resp) )
             elif vision_receive[1] == 'bm': # Build map
                 if vision_receive[2] != None:
-                    start_resp = self.VISION.set_start(1,vision_receive[2])
+                    start_resp = self.VISION.set_start(1,[vision_receive[2]])
                     print( 'set_start(), response: {}'.format(start_resp) )
                     logging.info("'Build map' command received , mapid : {} ".format(vision_receive[2])) 
                 else:
@@ -110,7 +118,7 @@ class Vision:
                     logging.info("'Build map' command received , but no mapid") 
             elif vision_receive[1] == 'um': # Use map
                 if vision_receive[2] != None:
-                    start_resp = self.VISION.set_start(0,vision_receive[2])
+                    start_resp = self.VISION.set_start(0,[vision_receive[2]])
                     print( 'set_start(), response: {}'.format(start_resp) )
                     logging.info("'Use map' command received , mapid : {} ".format(vision_receive[2])) 
                 else:
@@ -118,7 +126,7 @@ class Vision:
                     logging.info("'Use map' command received , but no mapid") 
             elif vision_receive[1] == 'kbm': # Keep building map
                 if vision_receive[2] != None:
-                    start_resp = self.VISION.set_start(2,vision_receive[2])
+                    start_resp = self.VISION.set_start(2,[vision_receive[2]])
                     print( 'set_start(), response: {}'.format(start_resp) )
                     logging.info("'Keep build map' command received , mapid : {} ".format(vision_receive[2])) 
                 else:
@@ -168,7 +176,7 @@ class Vision_Test:
 
 
     def main(self):
-        while self.VISION_SERVER:
+        while self.VISION_SERVER_RUN:
             try:
                 command = input('command : ')
                 self.vision_command(command)
@@ -188,6 +196,7 @@ class Vision_Test:
         while self.VISION_THREAD_SERVER_RUN:
             self.VISION_THREAD_SERVER_STATUS = self.THREAD.is_alive()
             vision_data = self.VISION_THREAD_SERVER.recv_list()
+            
             if vision_data != None:
                 self.X = vision_data[0]
                 self.Y = vision_data[1]
@@ -212,34 +221,40 @@ class Vision_Test:
             print('server run : {}'.format(self.VISION_SERVER_RUN))
             print('thread run : {}'.format(self.VISION_THREAD_SERVER_RUN))
             print('thread alive : {}'.format(self.VISION_THREAD_SERVER_STATUS))
-            print('Vision module : {}'.format(self.STATUS))
+            self.show_vision_status()
+        elif cmd == 'h':
+            self.help_manual()
         elif cmd == 'al':
             self.VISION_SERVER.send_list(['V','al'])
         elif cmd == 'cc':
             self.VISION_SERVER.send_list(['V','cc'])
         elif cmd == 'gp':
             self.VISION_SERVER.send_list(['V','gp'])
+            print('x : {} | y : {} | theta : {} '.format(self.X,self.Y,self.THETA))
         elif cmd == 'gs':
             self.VISION_SERVER.send_list(['V','gs'])
+            self.show_vision_status()
         elif cmd == 'sv':
             self.VISION_SERVER.send_list(['V','sv'])
         elif cmd == 'rs':
             self.VISION_SERVER.send_list(['V','rs'])
+            print('reset vision , please wait 3 second')
+            time.sleep(5)
         elif cmd == 'bm':
             if cmd_list[1] != None:
-                self.VISION_SERVER.send_list(['V','bm',cmd_list[1]])
+                self.VISION_SERVER.send_list(['V','bm',int(cmd_list[1])])
                 self.show_vision_data()
             else:
                 print('Please specify mapid (bm mapid). Ex : bm 1 ')
         elif cmd == 'um':
             if cmd_list[1] != None:
-                self.VISION_SERVER.send_list(['V','um',cmd_list[1]])
+                self.VISION_SERVER.send_list(['V','um',int(cmd_list[1])])
                 self.show_vision_data()
             else:
                 print('Please specify mapid (bm mapid). Ex : bm 1 ')
         elif cmd == 'kbm':
             if cmd_list[1] != None:
-                self.VISION_SERVER.send_list(['V','kbm',cmd_list[1]])
+                self.VISION_SERVER.send_list(['V','kbm',int(cmd_list[1])])
                 self.show_vision_data()
             else:
                 print('Please specify mapid (bm mapid). Ex : bm 1 ')
@@ -263,6 +278,8 @@ class Vision_Test:
             print('{} received. Wrong protocol')
 
     def show_vision_data(self):
+
+        self.show_vision_status()
         run = True
         while run:
             try:
@@ -270,6 +287,22 @@ class Vision_Test:
                 time.sleep(0.2)
             except:
                 run = False
+
+    def show_vision_status(self):
+        if self.STATUS == 0:
+            print("Vision module status : {} | Vision module is booting".format(self.STATUS))
+        elif self.STATUS == 1:
+            print("Vision module status : {} | Vision module is waiting for 'st $mapid' command".format(self.STATUS))
+        elif self.STATUS == 2:
+            print("Vision module status : {} | Vision module is loading data ".format(self.STATUS))
+        elif self.STATUS == 3:
+            print('Vision module status : {} | Please move slowly, fp-slam is searching a set of best images to initialize'.format(self.STATUS))
+        elif self.STATUS == 4:
+            print('Vision module status : {} | System is working normaaly'.format(self.STATUS))
+        elif self.STATUS == 5:
+            print('Vision module status : {} | Lost Lost Lost'.format(self.STATUS))
+        else:
+            print('Unknown status code : {}'.format(self.STATUS))
 
     def help_manual(self):
         print("al: chekc fp-slam is alive.")
