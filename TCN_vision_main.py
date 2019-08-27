@@ -24,7 +24,7 @@ class Vision:
         self.start_background_thread()
         self.main()
         self.end()
-        self.end_thread()
+        self.end_background_thread()
 
     def init(self):
         try:
@@ -42,7 +42,7 @@ class Vision:
                 raise KeyboardInterrupt            
         except:
             self.end()
-            self.end_thread()
+            self.end_background_thread()
             traceback.print_exc()
             logging.exception('Got error : ')
 
@@ -58,7 +58,7 @@ class Vision:
                 self.VISION_THREAD_RUN = False
                 logging.exception('Got error : \n')
                 self.end()
-                self.end_thread()
+                self.end_background_thread()
 
     def start_background_thread(self):
         THREAD = threading.Thread(target = self.send_vision_status , daemon = True)
@@ -74,7 +74,7 @@ class Vision:
             self.y = pose[3]
             self.theta = pose[4]
             self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
-            time.sleep(0.2)
+            time.sleep(0.15)
 
 
     def vision_portocol(self,vision_receive):
@@ -138,6 +138,140 @@ class Vision:
     def end_background_thread(self):
         self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
         self.VISION_THREAD_CLIENT.close()
+
+
+
+
+class Vision_Test:
+    def __init__(self):
+        try:
+            self.X = 0
+            self.Y = 0
+            self.THETA = 0
+            self.STATUS = 0
+            self.VISION_RUN = False
+            self.VISION_SERVER_RUN = False
+            self.VISION_THREAD_SERVER_RUN = False
+
+            self.VISION_THREAD_SERVER = TCN_socket.UDP_server(50006)
+            self.VISION_SERVER = TCN_socket.TCP_server(50001)
+            vision_receive = self.VISION_SERVER.recv_list()
+            self.vision_protocol(vision_receive)
+            self.VISION_SERVER_RUN = True
+            self.VISION_THREAD_SERVER_RUN = True
+            self.start_background_thread()
+            self.main()
+        except:
+            self.end()
+            self.end_background_thread()
+    
+
+
+    def main(self):
+        while self.VISION_SERVER:
+            try:
+                command = input('command : ')
+                self.vision_command(command)
+            except:
+                self.VISION_SERVER.send_list(['V','exit'])
+                time.sleep(1)
+                self.VISION_SERVER_RUN = False
+                self.VISION_THREAD_SERVER_RUN = False
+                self.end()
+                self.end_background_thread()
+
+    def start_background_thread(self):
+        self.THREAD = threading.Thread(target = self.get_vision_data , daemon = True)
+        self.THREAD.start()
+
+    def get_vision_data(self):
+        while self.VISION_THREAD_SERVER_RUN:
+            self.VISION_THREAD_SERVER_STATUS = self.THREAD.is_alive()
+            vision_data = self.VISION_THREAD_SERVER.recv_list()
+            if vision_data != None:
+                self.X = vision_data[0]
+                self.Y = vision_data[1]
+                self.THETA = vision_data[2]
+                self.STATUS = vision_data[3]
+                self.VISION_RUN = vision_data[4]
+                time.sleep(0.1)
+
+
+
+    def vision_command(self, command):
+        cmd_list = command.lower().split() #splits the input string on spaces
+        cmd = cmd_list[0]
+        if cmd == 'exit':
+            self.VISION_SERVER.send_list(['V','exit'])
+            time.sleep(1)
+            self.VISION_SERVER_RUN = False
+            self.VISION_THREAD_SERVER_RUN = False
+            self.end()
+            self.end_background_thread()
+        elif cmd == 'status':
+            print('server run : {}'.format(self.VISION_SERVER_RUN))
+            print('thread run : {}'.format(self.VISION_THREAD_SERVER_RUN))
+            print('thread alive : {}'.format(self.VISION_THREAD_SERVER_STATUS))
+            print('Vision module : {}'.format(self.STATUS))
+        elif cmd == 'al':
+            self.VISION_SERVER.send_list(['V','al'])
+        elif cmd == 'cc':
+            self.VISION_SERVER.send_list(['V','cc'])
+        elif cmd == 'gp':
+            self.VISION_SERVER.send_list(['V','gp'])
+        elif cmd == 'gs':
+            self.VISION_SERVER.send_list(['V','gs'])
+        elif cmd == 'sv':
+            self.VISION_SERVER.send_list(['V','sv'])
+        elif cmd == 'rs':
+            self.VISION_SERVER.send_list(['V','rs'])
+        elif cmd == 'bm':
+            if cmd_list[1] != None:
+                self.VISION_SERVER.send_list(['V','bm',cmd_list[1]])
+            else:
+                print('Please specify mapid (bm mapid). Ex : bm 1 ')
+        elif cmd == 'um':
+            if cmd_list[1] != None:
+                self.VISION_SERVER.send_list(['V','um',cmd_list[1]])
+            else:
+                print('Please specify mapid (bm mapid). Ex : bm 1 ')
+        elif cmd == 'kbm':
+            if cmd_list[1] != None:
+                self.VISION_SERVER.send_list(['V','kbm',cmd_list[1]])
+            else:
+                print('Please specify mapid (bm mapid). Ex : bm 1 ')
+
+
+    def end(self):
+        self.VISION_SERVER.close()
+
+
+    def end_background_thread(self):
+        self.VISION_THREAD_SERVER.close()
+        self.THREAD.join()
+        self.VISION_THREAD_SERVER_STATUS = self.THREAD.is_alive()
+
+
+    def vision_protocol(self,receive):
+        if receive[0] == 'V':
+            if receive[1] == 'next':
+                pass
+        else:
+            print('{} received. Wrong protocol')
+
+    def show_vision_data(self):
+        run = True
+        while run:
+            print('status : {} | x : {} | y : {} | theta : {}')
+
+
+        
+
+
+
+
+
+
 
 # Initial parameters
 vision_module = None
@@ -361,7 +495,5 @@ def help_manual():
     return
 
 if __name__ == "__main__":
-    init()
-    main()
-    end()
+    Vision()
 
