@@ -7,18 +7,254 @@ import sys
 import threading
 import logging
 
+class Bridge:
+    def __init__(self, AUTO_START = True):
+        '''If AUTO_START is False, program automatically run __init__ only'''
+        logging.basicConfig(filename='Bridge.log',filemode = 'w',level =logging.INFO)
+
+        # Bridge initial variables
+        self.AUTO_START = AUTO_START
+        self.BRIDGE_RUN = False
+
+        # Commander initail variables
+        self.COMMANDER_SERVER_RUN = True
+
+        # Vision initial variables
+        self.X = 0
+        self.Y = 0
+        self.THETA = 0
+        self.STATUS = 0
+        self.VISION_RUN = False
+        self.VISION_SERVER_RUN = False
+        self.VISION_THREAD_SERVER_RUN = False
+        self.VISION_THREAD_SERVER_STATUS = 0
+
+        # Lidar initial variables
+        self.LIDAR_DATA = []
+        self.LIDAR_SERVER_RUN_FLAG = False
+        self.LIDAR_THREAD_SERVER_RUN = False
+        self.LIDAR_THREAD_SERVER_STATUS = 0
+        self.LIDAR_USB_PORT = ""
+        self.LIDAR_CLIENT_RUN = False
+        self.LIDAR_THREAD_CLIENT_RUN = False
+
+        # STM32 inital variables
+        self.STM32_SERVER_RUN = False
+        self.STM32_THREAD_SERVER_RUN = False
+        self.STM32_THREAD_SERVER_STATUS = 0
+        self.STM32_USB_PORT_PATH = 0
+        self.STM32_PROGRAM_RUN = 0
+        self.STM32_POWER = 0
+
+        # Algorithm initial variables
+        self.ALGORITHM_RUN = False
+
+        if self.AUTO_START:
+            self.commander_init()
+            self.vision_init()
+        
+
+############### Commander ###############
+
+    def commander_init(self):
+        try:
+            logging.info("Initialize commander server\n")
+            self.COMMANDER_SERVER = TCN_socket.TCP_server(50000,1)
+            self.COMMANDER_SERVER.send_list(['C','next'])
+            logging.info("Commander connection complete !\n")
+            self.COMMANDER_SERVER_RUN = True
+        except:
+            self.end_commander_server()
+            traceback.print_exc()
+            print('\n Commander is not initialize')
+            logging.info('Bridge initializing fail at commander_init()\n')
+            logging.exception("Got error : \n")
+
+    def end_commander_server(self):
+        self.COMMANDER_SERVER.close()
+        self.COMMANDER_SERVER_RUN = False
+
+
+################## Vision ##############
+
+    def vision_init(self):
+        try:
+            logging.info("Initialize vision server\n")
+            self.VISION_THREAD_SERVER = TCN_socket.UDP_client(50006)
+            self.VISION_SERVER = TCN_socket.TCP_server(50001)
+            self.VISION_SERVER_RECEIVE = vision_server.recv_list()
+            if self.VISION_SERVER_RECEIVE == ['V','status','Alive']:
+                logging.info("Vision communication successfully established !\ncommunication center get : {} \n".format(self.VISION_SERVER_RECEIVE) )
+                self.COMMANDER_SERVER.send_list(['C','next'])
+                self.VISION_SERVER_RUN = True
+                self.VISION_THREAD_SERVER_RUN = True
+            else:
+                self.end_vision_server()
+                self.end_vision_thread_server()
+                print('{} received from TCN_vision'.format(self.VISION_DATA))
+                print('Either vision module got problem or undefined communication error of Vision module, please check test message')
+                logging.info('{} received from TCN_vision'.format(self.VISION_DATA))
+                logging.info("Either vision module got problem or undefined communication error of Vision module, please check test message\n")      
+        except:
+            self.VISION_SERVER.close()
+            self.VISION_THREAD_SERVER.close()
+            traceback.print_exc()
+            logging.info('Bridge initializing fail at vision_init()\n')
+            logging.exception("Got error : \n")         
+
+
+    def vision_start_background_thread(self):
+        self.VISION_THREAD = threading.Thread(target = self.vision_thread_main , daemon = True)
+        self.VISION_THREAD.start()
+
+    def vision_thread_main(self):
+        while self.VISION_THREAD_SERVER_RUN:
+            self.VISION_THREAD_SERVER_STATUS = self.VISION_THREAD.is_alive()
+            vision_data = self.VISION_THREAD_SERVER.recv_list()
+            if vision_data != None:
+                self.X = vision_data[0]
+                self.Y = vision_data[1]
+                self.THETA = vision_data[2]
+                self.STATUS = vision_data[3]
+                self.VISION_RUN = vision_data[4]
+                time.sleep(0.1)
+
+    def end_vision_server(self):
+        self.VISION_SERVER.send_list(['V','exit'])
+        time.sleep(1)
+        self.VISION_SERVER.close()
+        self.VISION_SERVER_RUN = False
+
+    def end_vision_thread_server(self):
+        self.VISION_THREAD_SERVER.close()
+        if self.VISION_THREAD_SERVER_RUN == True:
+            self.VISION_THREAD_SERVER_RUN = False
+            self.VISION_THREAD.join()
+            self.VISION_THREAD_SERVER_STATUS = self.VISION_THREAD.is_alive()
+
+
+
+################## LiDAR ######################
+
+    def lidar_init(self):
+        try:
+            logging.info("Initialize lidar server\n")
+            self.LIDAR_SERVER = TCN_socket.TCP_server(50002,1)
+            self.LIDAR_THREAD_SERVER = TCN_socket.UDP_server(50004)
+            lidar_data = self.LIDAR_SERVER.recv_list()
+            if lidar_data == ['L','status','Good']:
+                logging.info("Lidar communication successfully established !\ncommunication center get : {} \n".format(lidar_data) )
+                self.LIDAR_SERVER_RUN_FLAG = True
+                self.LIDAR_THREAD_SERVER_RUN = True
+                self.COMMANDER_SERVER.send_list(['C','next'])
+            else:
+                self.end_lidar_server()
+                self.end_lidar_thread_server()
+                print('Undefined communication error of Vision module, please check test message')
+                logging.info("Undefined communication error of Vision module, please check test message\n")
+                raise KeyboardInterrupt      
+        except:
+            self.LIDAR_SERVER.close()
+            self.LIDAR_THREAD_SERVER.close()
+            traceback.print_exc()
+            logging.info('Bridge initializing fail at lidar_init()\n')
+            logging.exception("Got error : \n")
+
+    def lidar_start_background_thread(self):
+        self.LIDAR_THREAD = threading.Thread(target = self.lidar_thread_main ,daemon = True)
+        self.LIDAR_THREAD.start()
+
+    def lidar_thread_main(self):
+        while self.LIDAR_THREAD_SERVER_RUN:
+            self.LIDAR_THREAD_SERVER_STATUS = self.LIDAR_THREAD.is_alive()  
+            if self.LIDAR_THREAD_SERVER.server_alive:
+                temp_lidar_data = self.LIDAR_THREAD_SERVER.recv_list(65536)
+                if temp_lidar_data:
+                    self.LIDAR_USB_PORT = temp_lidar_data[0]
+                    self.LIDAR_DATA = temp_lidar_data[1]
+            time.sleep(0.2)
+
+    def end_lidar_server(self):
+        self.LIDAR_SERVER.send_list(['V','exit'])
+        time.sleep(1)
+        self.LIDAR_SERVER.close()
+        self.LIDAR_SERVER_RUN_FLAG = False
+
+    def end_lidar_thread_server(self):
+        self.LIDAR_THREAD_SERVER.close()
+        if self.LIDAR_THREAD_SERVER_RUN == True:
+            self.LIDAR_THREAD_SERVER_RUN = False
+            self.LIDAR_THREAD.join()
+            self.LIDAR_THREAD_SERVER_STATUS = self.LIDAR_THREAD.is_alive()       
+
+
+############## STM32 #####################
+    
+    def stm32_init(self):
+        try:
+            logging.info("Initialize STM32 server\n")
+            self.STM32_SERVER = TCN_socket.TCP_server(50003,1)
+            self.STM32_THREAD_SERVER = TCN_socket.UDP_server(50005)
+            stm32_data = self.STM32_SERVER.recv_list()
+            if stm32_data == ['S','next']:
+                self.STM32_SERVER_RUN = True
+                self.STM32_THREAD_SERVER_RUN = True
+                logging.info("Lidar communication successfully established !\ncommunication center get : {} \n".format(stm32_data) )
+            else:
+                self.end_stm32_server()
+                self.end_stm32_thread_server()
+        except:
+            time.sleep(0.3)
+            self.STM32_SERVER.close()
+            self.STM32_THREAD_SERVER.close()
+            traceback.print_exc()
+            print('Bridge initializing fail at stm32_init()')
+
+    def stm32_start_background_thread(self):
+        self.STM32_THREAD = threading.Thread(target = self.stm32_thread_main , daemon = True)
+        self.STM32_THREAD.start()
+
+
+    def stm32_thread_main(self):
+        while self.STM32_THREAD_SERVER_RUN:
+            self.STM32_THREAD_SERVER_STATUS = self.STM32_THREAD.is_alive()
+            STM32_STATUS = self.STM32_THREAD_SERVER.recv_list(8192)
+            if STM32_STATUS != None:
+                self.USB_PORT_PATH = STM32_STATUS[0]
+                self.STM32_PROGRAM_RUN = STM32_STATUS[1]
+                self.STM32_POWER = STM32_STATUS[2]
+            time.sleep(0.5)
+
+    def end_stm32_server(self):
+        self.STM32_SERVER.send_list(['S','exit'])
+        time.sleep(1)
+        self.STM32_SERVER.close()
+        self.STM32_SERVER_RUN = False
+
+    def end_stm32_thread_server(self):
+        self.STM32_THREAD_SERVER.close()
+        if self.STM32_THREAD_SERVER_RUN == True:
+            self.STM32_THREAD_SERVER_RUN = False
+            self.STM32_THREAD.join()
+            self.STM32_THREAD_SERVER_STATUS = self.STM32_THREAD.is_alive()  
+
+
+
+
 '''Portocol'''
 ''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
 
 ###                                                                   ###
 ###    global variables                                               ###
 ###                                                                   ###
+
+
 commander_server = None
 lidar_server = None
 stm32_server = None
 vision_server = None
 bridge_run = False
-logging.basicConfig(filename='Bridge.log',filemode = 'w',level =logging.INFO)
+
 
 
 def bridge_init():
@@ -264,9 +500,10 @@ def end_bridge():
 
 
 if __name__ == "__main__":
-    bridge_init()
-    bridge_main()
-    end_bridge()
+    # bridge_init()
+    # bridge_main()
+    # end_bridge()
+    Bridge()
 
 
 # time.sleep(5)

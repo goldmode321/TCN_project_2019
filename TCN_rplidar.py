@@ -142,7 +142,7 @@ class Lidar(object):
         try:
             for scan in self.lidar.iter_scans():
                 self.lidar_data = scan
-                self.lidar_thread_client.send_list(self.lidar_data)
+                self.lidar_thread_client.send_list([self.lidar_USB_port , self.lidar_data ])
         except:
             self.reconnect()
             self.get_lidar_data()
@@ -193,7 +193,8 @@ class Lidar_test_communication(object):
             if self.lidar_thread_server.server_alive:
                 temp_lidar_data = self.lidar_thread_server.recv_list(65536)
                 if temp_lidar_data:
-                    self.lidar_data = temp_lidar_data
+                    self.LIDAR_USB_PORT = temp_lidar_data[0]
+                    self.lidar_data = temp_lidar_data[1]
             time.sleep(0.2)
 
     def server_run_background(self):
