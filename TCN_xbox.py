@@ -4,14 +4,14 @@ import traceback
 
 
 
-class xbox_controller(object):
+class Xbox_controller(object):
     
     def __init__(self):
         try:
             self.step = 0
             self.joy = xbox.Joystick()
         except IOError:
-            print('Xbox connect error, auto retry again.')
+            print('Xbox connect error, auto retry again ; Please move joystick or press any button')
             self.__init__()
         except:
             traceback.print_exc()
