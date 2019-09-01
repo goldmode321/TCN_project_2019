@@ -55,9 +55,10 @@ class STM32_command(object):
 
     def init_socket(self):
         try:
+            time.sleep(0.2) # Make sure server initialize first
             logging.info('Successfully connect to STM32 , port : {} \n'.format(self.USB_PORT_PATH))
-            self.STM32_CLIENT = TCN_socket.TCP_client(50003)
-            self.STM32_BACKGROUND_CLIENT = TCN_socket.UDP_client(50005)
+            self.STM32_CLIENT = TCN_socket.TCP_client(50006)
+            self.STM32_BACKGROUND_CLIENT = TCN_socket.UDP_client(50007)
             logging.info('STM32 communication established\n')
             self.STM32_CLIENT.send_list(['S','next'])
             self.KEEP_RUNNING = True
@@ -67,7 +68,7 @@ class STM32_command(object):
             self.end()
             self.end_background_thread()
 
-
+        
 
     def main(self):
         self.start_backgound_thread()
@@ -288,8 +289,8 @@ class STM32_Test_Communication:
                 print('please Run with sudo\n\n')
                 sys.exit(0)
             self.xbox = TCN_xbox.xbox_controller()
-            self.STM32_SERVER = TCN_socket.TCP_server(50003,1)
-            self.STM32_BACKGROUND_SERVER = TCN_socket.UDP_server(50005)
+            self.STM32_SERVER = TCN_socket.TCP_server(50006)
+            self.STM32_BACKGROUND_SERVER = TCN_socket.UDP_server(50007)
             stm32_data = self.STM32_SERVER.recv_list()
             self.bridge_potorcol(stm32_data)
             self.MAIN_FLAG = True

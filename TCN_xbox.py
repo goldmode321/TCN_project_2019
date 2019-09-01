@@ -33,7 +33,7 @@ class Xbox_controller(object):
         y = int(self.step*round(self.joy.leftY(),2))
         z = int(self.step*round(self.joy.rightX(),2))
         
-        return [x,y,z]
+        return [x,y,z,self.step]
 
     def close(self):
         self.joy.close()
@@ -102,5 +102,6 @@ def xbox_main():
 '''
 
 if __name__ == "__main__":
-    pass
+    x = Xbox_controller()
+    x.xbox_test()
     # xbox_main()    

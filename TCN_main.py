@@ -2,6 +2,7 @@
 import TCN_socket
 import time
 import subprocess
+import os
 import traceback
 import threading
 import TCN_xbox
@@ -11,28 +12,30 @@ class Commander():
     def __init__(self,AUTO_RUN = True):
         logging.basicConfig(filename='Main.log',filemode = 'w',level =logging.INFO)
         self.AUTO_RUN = AUTO_RUN
-        self.COMMANDER_SERVER = None
+        self.COMMANDER_TCP_SERVER = None
         self.COMMANDER_RUN = False
-        self.COMMANDER_SERVER_RUN = True
+        self.COMMANDER_TCP_SERVER_RUN = False
 
 
         if self.AUTO_RUN:
             self.bridge_init()
+            self.COMMANDER_TCP_SERVER.recv_list()
             self.commander_main()
+            
 
 ########### Commander TCP Server version #############
     def bridge_init(self):
-        if self.COMMANDER_SERVER_RUN == False:
-            self.PROCESS_BRIDGE = subprocess.Popen('sudo python3 TCN_bridge.py',shell = True)
+        if self.COMMANDER_TCP_SERVER_RUN == False:
+            self.PROCESS_BRIDGE = subprocess.Popen('sudo python3 TCN_bridge.py',shell = True, start_new_session = True)
             print('##### Initializing communication center #####')
             logging.info("Bridge initializing")
-            time.sleep(1)    # Wait some time for assuming Communication center(CC) work  稍微delay，以確保CC正常運作
             print("Establish TCP connection to communication center\nSend test data ['C',1,2,3]")
-            self.COMMANDER_SERVER = TCN_socket.TCP_server(50000)
-            commander_receive = self.COMMANDER_SERVER.recv_list()
+            self.COMMANDER_UDP_SERVER = TCN_socket.UDP_server(50001)
+            self.COMMANDER_TCP_SERVER = TCN_socket.TCP_server(50000)
+            commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
             self.commander_protocol(commander_receive) # Waiting for [ 'C' , 'next' ]
             logging.info("Bridge - commander initialization completed\n")
-            self.COMMANDER_SERVER_RUN = True
+            self.COMMANDER_TCP_SERVER_RUN = True
         else:
             print('Bridge run already')
 
@@ -59,71 +62,87 @@ class Commander():
                 command = command_list[0]
                 
                 if command == 'cs':
-                    print('Commander run : {} \nCommander server run : {}'.format(self.COMMANDER_RUN,self.COMMANDER_SERVER_RUN))
+                    print('Commander run : {} \nCommander server run : {}'.format(self.COMMANDER_RUN,self.COMMANDER_TCP_SERVER_RUN))
                 elif command == 'bi':
                     self.bridge_init()
+                elif command == 'h':
+                    self.help()
 
-                elif command and self.COMMANDER_SERVER_RUN == False:
+                elif command and self.COMMANDER_TCP_SERVER_RUN == False:
                     print("Commander server is not working, please use 'bi' command to initialize bridge first ")
                 
-                elif command and self.COMMANDER_SERVER_RUN == True:
+                elif command and self.COMMANDER_TCP_SERVER_RUN == True:
                     if command == 'exit':
                         if len(command_list) > 1:
                             if command_list[1]== 'all':
                                 self.end_commander()
                             elif command_list[1] == 'b':
-                                self.COMMANDER_SERVER.send_list(['C','exit','all'])
+                                self.COMMANDER_TCP_SERVER.send_list(['C','exit','all'])
                                 print('Commander server will be close in 5 second')
                                 time.sleep(5)
-                                self.COMMANDER_SERVER.close()
-                                self.COMMANDER_SERVER = None
-                                self.COMMANDER_SERVER_RUN = False
+                                self.COMMANDER_TCP_SERVER.close()
+                                self.COMMANDER_UDP_SERVER.close()
+                                self.COMMANDER_TCP_SERVER = None
+                                self.COMMANDER_TCP_SERVER_RUN = False
                             elif command_list[1] == 'l':
-                                self.COMMANDER_SERVER.send_list(['C','exit','l'])
+                                self.COMMANDER_TCP_SERVER.send_list(['C','exit','l'])
                             elif command_list[1] == 's':
-                                self.COMMANDER_SERVER.send_list(['C','exit','s'])
+                                self.COMMANDER_TCP_SERVER.send_list(['C','exit','s'])
                             elif command_list[1] == 'v':
-                                self.COMMANDER_SERVER.send_list(['C','exit','v'])
+                                self.COMMANDER_TCP_SERVER.send_list(['C','exit','v'])
                             else:
                                 print("Please specify which exit command to use Ex:'exit all'")
                     elif command == 'gld':
-                        self.COMMANDER_SERVER.send_list(['C','gld'])
-                        print(self.COMMANDER_SERVER.recv_list(16384))
+                        self.COMMANDER_TCP_SERVER.send_list(['C','gld'])
+                        print(self.COMMANDER_TCP_SERVER.recv_list(16384))
                     elif command == 'gs':
-                        self.COMMANDER_SERVER.send_list(['C','gs'])
-                        self.show_vision_status(self.COMMANDER_SERVER.recv_list())
+                        self.COMMANDER_TCP_SERVER.send_list(['C','gs'])
+                        self.show_vision_status(self.COMMANDER_TCP_SERVER.recv_list())
                     elif command == 'gp':
                         if len(command_list) > 1:
                             if command_list[1] == 'c':
-                                self.COMMANDER_SERVER.send_list(['C','gp','c'])
+                                self.COMMANDER_TCP_SERVER.send_list(['C','gp','c'])
                                 self.show_vision_data()
                             elif command_list[1] == 'x':
-                                self.COMMANDER_SERVER.send_list(['C','gp','x'])
+                                self.COMMANDER_TCP_SERVER.send_list(['C','gp','x'])
                                 self.show_vision_data()
                         else:
-                            self.COMMANDER_SERVER.send_list(['C','gp'])
-                            commander_receive = self.COMMANDER_SERVER.recv_list()
+                            self.COMMANDER_TCP_SERVER.send_list(['C','gp'])
+                            commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
                             print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C to terminate'.format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3]))
+                    elif command == 'mwx':
+                        try:
+                            self.COMMANDER_TCP_SERVER.recv_list()
+                        except KeyboardInterrupt:
+                            self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            self.COMMANDER_TCP_SERVER.recv_list()
+                            time.sleep(0.5)
+
+
 
 
                     
             except KeyboardInterrupt:
+                print('Keyboard Interrupt')
                 self.end_commander()
             except:
                 self.end_commander()
+                print('\nError From Commander\n')
                 traceback.print_exc()            
 
     def show_vision_data(self):
-        run = True
-        while run:
+        self.SHOW_VISION_DATA_RUN = True
+        while self.SHOW_VISION_DATA_RUN:
             try:
-                commander_receive = self.COMMANDER_SERVER.recv_list()
+                commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
                 print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C to terminate'.format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3]))
-                time.sleep(0.2)
-                commander_receive.send_list(['C','next'])
+                # time.sleep(0.2)
+                self.COMMANDER_TCP_SERVER.send_list(['C','next'])
             except:
-                commander_receive.send_list(['C','halt'])
-                run = False
+                self.COMMANDER_TCP_SERVER.send_list(['C','gp','exit'])
+                self.SHOW_VISION_DATA_RUN = False
+                time.sleep(0.5)
+                self.COMMANDER_TCP_SERVER.recv_list()
 
     def help(self):
         print('\nCommander relative\n')
@@ -144,13 +163,14 @@ class Commander():
 
 
     def end_commander(self):
-        if self.COMMANDER_SERVER != None:
-            self.COMMANDER_SERVER.send_list(['C','exit','all'])
+        if self.COMMANDER_TCP_SERVER != None:
+            self.COMMANDER_TCP_SERVER.send_list(['C','exit','all'])
             print('All process will be closed in 5 second')
             time.sleep(5)
-            self.COMMANDER_SERVER.close()
-            self.COMMANDER_SERVER = None
-        self.COMMANDER_SERVER_RUN = False
+            self.COMMANDER_TCP_SERVER.close()
+            self.COMMANDER_UDP_SERVER.close()
+            self.COMMANDER_TCP_SERVER = None
+        self.COMMANDER_TCP_SERVER_RUN = False
         self.COMMANDER_RUN = False
         logging.info('Commander end')
 
@@ -162,26 +182,28 @@ class Commander():
         if commander_receive[0] == 'C':
             if commander_receive[1] == 'next':
                 pass
-
-            if commander_receive[1] == 'gld':
+            elif commander_receive[1] == 'gp':
+                if commander_receive[2] == 'exit':
+                    self.SHOW_VISION_DATA_RUN = False
+            elif commander_receive[1] == 'gld':
                 print(commander_receive[2])
 
 
     def show_vision_status(self,vision_status):
-        if vision_status == 0:
-            print("Vision module status : {} | Vision module is booting".format(vision_status))
-        elif vision_status == 1:
-            print("Vision module status : {} | Vision module is waiting for 'st $mapid' command".format(vision_status))
-        elif vision_status == 2:
-            print("Vision module status : {} | Vision module is loading data ".format(vision_status))
-        elif vision_status == 3:
-            print('Vision module status : {} | Please move slowly, fp-slam is searching a set of best images to initialize'.format(vision_status))
-        elif vision_status == 4:
-            print('Vision module status : {} | System is working normaaly'.format(vision_status))
-        elif vision_status == 5:
-            print('Vision module status : {} | Lost Lost Lost'.format(vision_status))
+        if vision_status[0] == 0:
+            print("Vision module status : {} | Vision module is booting".format(vision_status[0]))
+        elif vision_status[0] == 1:
+            print("Vision module status : {} | Vision module is waiting for 'st $mapid' command".format(vision_status[0]))
+        elif vision_status[0] == 2:
+            print("Vision module status : {} | Vision module is loading data ".format(vision_status[0]))
+        elif vision_status[0] == 3:
+            print('Vision module status : {} | Please move slowly, fp-slam is searching a set of best images to initialize'.format(vision_status[0]))
+        elif vision_status[0] == 4:
+            print('Vision module status : {} | System is working normaaly'.format(vision_status[0]))
+        elif vision_status[0] == 5:
+            print('Vision module status : {} | Lost Lost Lost'.format(vision_status[0]))
         else:
-            print('Unknown status code : {}'.format(vision_status))
+            print('Unknown status code : {}'.format(vision_status[0]))
 
 
 
@@ -233,7 +255,7 @@ def commander_portocol(commander_receive):
 ###                                                                   ###
 def xbox_init():
     global xbox
-    xbox = TCN_xbox.xbox_controller()
+    xbox = TCN_xbox.Xbox_controller()
     logging.info('Xbox start without error')
 
 

@@ -21,8 +21,8 @@ class Lidar(object):
         ###############
         try:
             logging.info("Initializing Lidar_client")
-            self.lidar_client = TCN_socket.TCP_client(50002)
-            self.lidar_thread_client = TCN_socket.UDP_client(50004)
+            self.lidar_client = TCN_socket.TCP_client(50004)
+            self.lidar_thread_client = TCN_socket.UDP_client(50005)
             self.lidar_scan_port()
             self.lidar_client.send_list(['L','status',str(self.lidar_state[0])])
             self.lidar_run_flag = True
@@ -158,8 +158,9 @@ class Lidar_test_communication(object):
             self.lidar_receive = []
             self.lidar_server_run_flag = False
             self.lidar_thread_server_run_flag = False
-            self.lidar_server = TCN_socket.TCP_server(50002,1)
-            self.lidar_thread_server = TCN_socket.UDP_server(50004)
+            time.sleep(0.2) # Make sure server initialize first
+            self.lidar_server = TCN_socket.TCP_server(50004,1)
+            self.lidar_thread_server = TCN_socket.UDP_server(50005)
             self.lidar_receive = self.lidar_server.recv_list()
             if self.lidar_receive == ['L','status','Good']:
                 print('Lidar connected')

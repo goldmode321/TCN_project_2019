@@ -29,10 +29,11 @@ class Vision:
 
     def init(self):
         try:
+            time.sleep(0.2) # Make sure server initialize first
             logging.basicConfig(filename='Vision_main.log',filemode = 'w',level =logging.INFO)
             self.VISION = xmlrpclib.ServerProxy("http://{}:8080".format(self.IP))
-            self.VISION_THREAD_CLIENT = TCN_socket.UDP_client(50006)
-            self.VISION_CLIENT = TCN_socket.TCP_client(50001)
+            self.VISION_THREAD_CLIENT = TCN_socket.UDP_client(50003)
+            self.VISION_CLIENT = TCN_socket.TCP_client(50002)
             if self.VISION.alive() == [0,'Alive']:
                 logging.info('Connection to Vision module establiished , Vision module status : {}\n'.format(self.VISION.alive()))
                 self.VISION_CLIENT.send_list(['V','status','Alive'])
@@ -161,8 +162,8 @@ class Vision_Test:
             self.VISION_SERVER_RUN = False
             self.VISION_THREAD_SERVER_RUN = False
 
-            self.VISION_THREAD_SERVER = TCN_socket.UDP_server(50006)
-            self.VISION_SERVER = TCN_socket.TCP_server(50001)
+            self.VISION_THREAD_SERVER = TCN_socket.UDP_server(50003)
+            self.VISION_SERVER = TCN_socket.TCP_server(50002)
             vision_receive = self.VISION_SERVER.recv_list()
             self.vision_protocol(vision_receive)
             self.VISION_SERVER_RUN = True
