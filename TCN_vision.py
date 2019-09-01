@@ -14,7 +14,7 @@ import TCN_gpio
 class Vision:
     def __init__(self,AUTO_START = True , ip = '192.168.5.100'):
         self.IP = ip
-        self.VISION_RUN = False
+        self.VISION_CLIENT_RUN = False
         self.VISION_THREAD_RUN = False
         self.RESET_FALG = False
         if AUTO_START:
@@ -37,7 +37,7 @@ class Vision:
             if self.VISION.alive() == [0,'Alive']:
                 logging.info('Connection to Vision module establiished , Vision module status : {}\n'.format(self.VISION.alive()))
                 self.VISION_CLIENT.send_list(['V','status','Alive'])
-                self.VISION_RUN = True
+                self.VISION_CLIENT_RUN = True
                 self.VISION_THREAD_RUN = True
             else:
                 logging.info('Vision module is not Alive\n')
@@ -49,14 +49,14 @@ class Vision:
             logging.exception('Got error : ')
 
     def main(self):
-        while self.VISION_RUN:
+        while self.VISION_CLIENT_RUN:
             try:
                 vision_receive = self.VISION_CLIENT.recv_list()
                 logging.info('Command in : {} '.format(vision_receive))
                 self.vision_portocol(vision_receive)
             except:
                 traceback.print_exc()
-                self.VISION_RUN = False
+                self.VISION_CLIENT_RUN = False
                 self.VISION_THREAD_RUN = False
                 logging.exception('Got error : \n')
                 self.end()
@@ -68,7 +68,7 @@ class Vision:
         logging.info('Thread running')
 
     def send_vision_status(self):
-        while self.VISION_RUN:
+        while self.VISION_CLIENT_RUN:
             if self.RESET_FALG == True:
                 time.sleep(4.8)
                 self.RESET_FALG = False
@@ -79,15 +79,15 @@ class Vision:
                 self.x = pose[3]
                 self.y = pose[4]
                 self.theta = pose[5]
-                # print(sys.getsizeof([self.x , self.y , self.theta , self.status , self.VISION_RUN]))
-                self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
+                # print(sys.getsizeof([self.x , self.y , self.theta , self.status , self.VISION_CLIENT_RUN]))
+                self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_CLIENT_RUN , self.VISION_THREAD_RUN])
             time.sleep(0.15)
 
 
     def vision_portocol(self,vision_receive):
         if vision_receive[0] == 'V':
             if vision_receive[1] == 'exit':
-                self.VISION_RUN = False
+                self.VISION_CLIENT_RUN = False
                 logging.info(" 'exit' command received, start terminating program\n")
             elif vision_receive[1] == 'al':
                 alive_resp = self.VISION.alive()
@@ -140,12 +140,12 @@ class Vision:
 
 
     def end(self):
-        self.VISION_RUN = False
+        self.VISION_CLIENT_RUN = False
         self.VISION_CLIENT.close()
         logging.info(" Vision module disconnect \n")
 
     def end_background_thread(self):
-        self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_RUN])
+        self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_CLIENT_RUN , self.VISION_THREAD_RUN])
         self.VISION_THREAD_CLIENT.close()
 
 
@@ -158,7 +158,7 @@ class Vision_Test:
             self.Y = 0
             self.THETA = 0
             self.STATUS = 0
-            self.VISION_RUN = False
+            self.VISION_CLIENT_RUN = False
             self.VISION_SERVER_RUN = False
             self.VISION_THREAD_SERVER_RUN = False
 
@@ -203,7 +203,8 @@ class Vision_Test:
                 self.Y = vision_data[1]
                 self.THETA = vision_data[2]
                 self.STATUS = vision_data[3]
-                self.VISION_RUN = vision_data[4]
+                self.VISION_CLIENT_RUN = vision_data[4]
+                self.VISION_THREAD_CLIENT_RUN = vision_data[5]
                 time.sleep(0.1)
 
 
@@ -220,8 +221,10 @@ class Vision_Test:
             self.end_background_thread()
         elif cmd == 'status':
             print('server run : {}'.format(self.VISION_SERVER_RUN))
-            print('thread run : {}'.format(self.VISION_THREAD_SERVER_RUN))
-            print('thread alive : {}'.format(self.VISION_THREAD_SERVER_STATUS))
+            print('server thread run : {}'.format(self.VISION_THREAD_SERVER_RUN))
+            print('server thread alive : {}'.format(self.VISION_THREAD_SERVER_STATUS))
+            print('client run : {}'.format(self.VISION_CLIENT_RUN))
+            print('client thread run : {}'.format(self.VISION_THREAD_CLIENT_RUN))
             self.show_vision_status()
         elif cmd == 'h':
             self.help_manual()

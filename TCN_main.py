@@ -92,9 +92,25 @@ class Commander():
                                 self.COMMANDER_TCP_SERVER.send_list(['C','exit','v'])
                             else:
                                 print("Please specify which exit command to use Ex:'exit all'")
+
+
+                    ################ LiDAR ###############
+                    elif command == 'li':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','li'])
+                        self.commander_protocol(self.COMMANDER_TCP_SERVER.recv_list())
                     elif command == 'gld':
                         self.COMMANDER_TCP_SERVER.send_list(['C','gld'])
                         print(self.COMMANDER_TCP_SERVER.recv_list(16384))
+
+
+                    ################ Vision #############
+                    elif command == 'vi':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','vi'])
+                        self.commander_protocol(self.COMMANDER_TCP_SERVER.recv_list())
+                    elif command == 'vs':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','vs'])
+                        commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
+                        print('Vision server : {}\nVision thread server : {}\nVision client : {}\nVision thread client : {}'.format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3]))
                     elif command == 'gs':
                         self.COMMANDER_TCP_SERVER.send_list(['C','gs'])
                         self.show_vision_status(self.COMMANDER_TCP_SERVER.recv_list())
@@ -110,21 +126,31 @@ class Commander():
                             self.COMMANDER_TCP_SERVER.send_list(['C','gp'])
                             commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
                             print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C to terminate'.format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3]))
+
+                    ############### STM32 & XBOX ##############
+                    elif command == 'xs':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','xs'])
+                        commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
+                        print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}\nXBOX thread alive : {}'\
+                            .format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3],commander_receive[4],commander_receive[5],commander_receive[6]))
+                    elif command == 'si':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','si'])
+                        self.commander_protocol(self.COMMANDER_TCP_SERVER.recv_list())                   
                     elif command == 'mwx':
                         try:
+                            self.COMMANDER_TCP_SERVER.send_list(['C','mwx'])
                             self.COMMANDER_TCP_SERVER.recv_list()
                         except KeyboardInterrupt:
+                            print('KeyboardInterrupt')
                             self.COMMANDER_UDP_SERVER.send_list(['end'])
                             self.COMMANDER_TCP_SERVER.recv_list()
                             time.sleep(0.5)
-
-
-
-
                     
             except KeyboardInterrupt:
                 print('Keyboard Interrupt')
                 self.end_commander()
+            except IndexError:
+                pass
             except:
                 self.end_commander()
                 print('\nError From Commander\n')
@@ -147,19 +173,28 @@ class Commander():
     def help(self):
         print('\nCommander relative\n')
         print("cs : Check for commander status")
-        print("bi : Initialize bridge")
         print("exit all : Close all process")
         
         print("\nBridge relative\n")
         print("exit b : Close bridge and commander server")
+        print("bi : Initialize bridge")
         
         print("\nLiDAR relative\n")
         print("gld : Show instant LiDAR data")
+        print("li : Initialize LiDAR")
         print("exit l : Close LiDAR ")
 
         print("\nVision relative\n")
         print("gs : Get vision module status")
         print("gp : Show vision data")
+        print("gp c : Continuous show vision data")
+        print("gp x : Contunuous show vision data, with XBOX control")
+        print("vs : Vision status")
+        print("vi : Initialize Vision")
+        print("exit v : Close vision")
+
+        print("\nSTM32 relative\n")
+        print("mwx : Enable xbox control")
 
 
     def end_commander(self):
@@ -186,6 +221,8 @@ class Commander():
                 if commander_receive[2] == 'exit':
                     self.SHOW_VISION_DATA_RUN = False
             elif commander_receive[1] == 'gld':
+                print(commander_receive[2])
+            elif commander_receive[1] == 'm':
                 print(commander_receive[2])
 
 

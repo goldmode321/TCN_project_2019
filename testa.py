@@ -82,40 +82,54 @@ except:
     traceback.print_exc()
     run = False
 '''
+
+
+
+
+# import TCN_socket
+# import time
+# import threading
+
+# # client = TCN_socket.TCP_client(55555)
+# client = TCN_socket.TCP_server(55555,1)
+# # client = TCN_socket.UDP_server(55555,1)
+# global i
+# i = 0
+
+# def multi():
+#     global i 
+#     while True:
+#         i = i+1
+#         time.sleep(0.5)
+
+
+
+# thread = threading.Thread(target = multi)
+# thread.daemon = True
+# thread.start()
+
+
+# while True:
+#     try:
+        
+#         data = client.recv_list()
+#         # data = client.recv_string(1024)
+#         print('client get {} '.format(data))
+#         time.sleep(1)
+#         # client.send_list(['number of receive',i])
+#         client.send_list(['thread run',i])
+#         # client.send_string(str(['thread run',i]))
+#     except:
+#         client.close()
+#         break
+
 import TCN_socket
 import time
-import threading
+client = TCN_socket.TCP_client(50000)
+try:
+    time.sleep(10)
+    client.send_list([321])
+except KeyboardInterrupt:
+    print('keyboard')
 
-# client = TCN_socket.TCP_client(55555)
-client = TCN_socket.TCP_server(55555,1)
-# client = TCN_socket.UDP_server(55555,1)
-global i
-i = 0
-
-def multi():
-    global i 
-    while True:
-        i = i+1
-        time.sleep(0.5)
-
-
-
-thread = threading.Thread(target = multi)
-thread.daemon = True
-thread.start()
-
-
-while True:
-    try:
-        
-        data = client.recv_list()
-        # data = client.recv_string(1024)
-        print('client get {} '.format(data))
-        time.sleep(1)
-        # client.send_list(['number of receive',i])
-        client.send_list(['thread run',i])
-        # client.send_string(str(['thread run',i]))
-    except:
-        client.close()
-        break
-
+client.close()

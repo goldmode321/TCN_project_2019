@@ -35,10 +35,11 @@ class Bridge:
         self.THETA = 0
         self.VISION_STATUS = 0
         self.VISION_DATA = []
-        self.VISION_RUN = False
+        self.VISION_CLIENT_RUN = False
         self.VISION_SERVER_RUN = False
         self.VISION_THREAD_SERVER_RUN = False
         self.VISION_THREAD_SERVER_STATUS = 0
+        self.VISION_THREAD_CLIENT_RUN = False
 
         # Lidar initial variables
         self.LIDAR_DATA = []
@@ -78,9 +79,10 @@ class Bridge:
     def xbox_get_data(self):
         self.XBOX_THREAD = threading.Thread(target = self.xbox_main , daemon = True)
         self.XBOX_THREAD.start()
-        self.XBOX_RUN = True
+        
 
     def xbox_main(self):
+        self.XBOX_RUN = True
         while self.XBOX_RUN:
             move_command = self.XBOX.xbox_control()
             self.XBOX_X = move_command[0]
@@ -88,7 +90,7 @@ class Bridge:
             self.XBOX_Z = move_command[2]
             self.XBOX_STEP = move_command[3]
             if self.XBOX_MOVE_STM32 == True:
-                self.STM32_SERVER.send_list(['S','move',[self.XBOX_X,self.XBOX_Y,self.XBOX_Z]])
+                self.STM32_SERVER.send_list(['S','xbox_move',[self.XBOX_X,self.XBOX_Y,self.XBOX_Z]])
                 self.bridge_protocol(self.STM32_SERVER.recv_list())
             time.sleep(0.05)
 
@@ -152,7 +154,7 @@ class Bridge:
         try:
             logging.info("Initialize vision server\n")
             process_vision = subprocess.Popen('python3 TCN_vision.py',shell = True ,start_new_session = True)
-            self.VISION_THREAD_SERVER = TCN_socket.UDP_client(50003)
+            self.VISION_THREAD_SERVER = TCN_socket.UDP_server(50003)
             self.VISION_SERVER = TCN_socket.TCP_server(50002)
             self.VISION_SERVER_RECEIVE = self.VISION_SERVER.recv_list()
             if self.VISION_SERVER_RECEIVE == ['V','status','Alive']:
@@ -190,7 +192,8 @@ class Bridge:
                 self.Y = vision_data[1]
                 self.THETA = vision_data[2]
                 self.VISION_STATUS = vision_data[3]
-                self.VISION_RUN = vision_data[4]
+                self.VISION_CLIENT_RUN = vision_data[4]
+                self.VISION_THREAD_CLIENT_RUN = vision_data[5]
                 time.sleep(0.1)
 
     def end_vision_server(self):
@@ -393,33 +396,58 @@ class Bridge:
                     pass
                 
                     
-                # elif commander_data[1] == 'key_move':
-                #     stm32_server.send_list(['S','move',[ commander_data[2],commander_data[3],commander_data[4] ] ])
-                
+######################## STM32 & XBOX #################
+                elif bridge_receive[1] == 'xs':
+                    self.COMMANDER_SERVER.send_list([self.XBOX_RUN,self.XBOX_MOVE_STM32,self.XBOX_X,self.XBOX_Y,self.XBOX_Z,self.XBOX_STEP,self.XBOX_THREAD.is_alive()])
+                elif bridge_receive[1] == 'si':
+                    if self.STM32_SERVER_RUN == False:
+                        self.stm32_init()
+                        self.COMMANDER_SERVER.send_list(['C','next'])
+                    else:
+                        self.COMMANDER_SERVER.send_list(['C','m','STM32 run already'])
                 elif bridge_receive[1] == 'mwx':
                     self.XBOX_MOVE_STM32 = True
-                    while not self.XBOX.joy.Back() and self.XBOX_MOVE_STM32:
-                        temp_list = self.COMMANDER_UDP_CLIENT.recv_list()
-                        if temp_list[0] == 'end':
-                            self.XBOX_MOVE_STM32 = False
-                        else:
-                            self.XBOX_MOVE_STM32 = True  
-                        time.sleep(0.1)      
+                    while self.XBOX_MOVE_STM32 and not self.XBOX.joy.Back():
+                        try:
+                            temp_list = self.COMMANDER_UDP_CLIENT.recv_list()
+                            if temp_list[0] == 'end':
+                                self.XBOX_MOVE_STM32 = False
+                            else:
+                                self.XBOX_MOVE_STM32 = True  
+                            time.sleep(0.1)
+                        except TypeError:
+                            pass
                     self.XBOX_MOVE_STM32 = False
                     self.COMMANDER_SERVER.send_list(['C','next'])
-
-                elif bridge_receive[1] == 'gld':
-                    self.COMMANDER_SERVER.send_list([self.LIDAR_DATA])
                     
-
                 elif bridge_receive[1] == 'stop_motor':
                     self.STM32_SERVER.send_list(['S','stop'])
 
+######################## LiDAR #################
+                elif bridge_receive[1] == 'li':
+                    if self.LIDAR_SERVER_RUN == False:
+                        self.lidar_init()
+                        self.COMMANDER_SERVER.send_list(['C','next'])
+                    else:
+                        self.COMMANDER_SERVER.send_list(['C','m','LiDAR run already'])
+                elif bridge_receive[1] == 'gld':
+                    self.COMMANDER_SERVER.send_list([self.LIDAR_DATA])
 
+
+
+######################## Vision ################
+                elif bridge_receive[1] == 'vi':
+                    if self.VISION_SERVER_RUN == False:
+                        self.vision_init()
+                        self.COMMANDER_SERVER.send_list(['C','next'])
+                    else:
+                        self.COMMANDER_SERVER.send_list(['C','m','Vision run already'])
                 elif bridge_receive[1] == 'al':
                     self.VISION_SERVER.send_list(['V','al'])
                 elif bridge_receive[1] == 'cc':
                     self.VISION_SERVER.send_list(['V','cc'])
+                elif bridge_receive[1] == 'vs':
+                    self.COMMANDER_SERVER.send_list([self.VISION_SERVER_RUN,self.VISION_THREAD_SERVER_RUN,self.VISION_CLIENT_RUN,self.VISION_THREAD_CLIENT_RUN])
                 elif bridge_receive[1] == 'gp':
                     try:
                         if bridge_receive[2] == 'c':

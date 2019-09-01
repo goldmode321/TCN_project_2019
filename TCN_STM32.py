@@ -288,7 +288,7 @@ class STM32_Test_Communication:
             if os.getuid() != 0:
                 print('please Run with sudo\n\n')
                 sys.exit(0)
-            self.xbox = TCN_xbox.xbox_controller()
+            self.xbox = TCN_xbox.Xbox_controller()
             self.STM32_SERVER = TCN_socket.TCP_server(50006)
             self.STM32_BACKGROUND_SERVER = TCN_socket.UDP_server(50007)
             stm32_data = self.STM32_SERVER.recv_list()
