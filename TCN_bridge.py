@@ -242,7 +242,7 @@ class Bridge:
             print('\nError from Bridge : lidar_init\n')
             traceback.print_exc()
             logging.info('Bridge initializing fail at lidar_init()\n')
-            logging.exception("Got error : \n")
+            logging.exception("Bridge initializing fail at lidar_init() : \n")
 
     def lidar_start_background_thread(self):
         self.LIDAR_THREAD = threading.Thread(target = self.lidar_thread_main ,daemon = True)
@@ -301,6 +301,7 @@ class Bridge:
             print('\nError from Bridge : stm32_init\n')
             traceback.print_exc()
             print('Bridge initializing fail at stm32_init()')
+            logging.exception('Bridge initializing fail at stm32_init() :\n')
 
     def stm32_start_background_thread(self):
         self.STM32_THREAD = threading.Thread(target = self.stm32_thread_main , daemon = True)
@@ -333,7 +334,7 @@ class Bridge:
             self.STM32_THREAD_SERVER_RUN = False
             self.STM32_THREAD.join()
             self.STM32_THREAD_SERVER_STATUS = self.STM32_THREAD.is_alive()  
-        logging.info('STM32 thread ')
+        logging.info('STM32 thread end')
 
 ############ Bridge main ###################
     def bridge_main(self):
@@ -391,6 +392,8 @@ class Bridge:
                     elif bridge_receive[2] == 'v':
                         self.end_vision_server()
                         self.end_vision_thread_server()
+                    elif bridge_receive[2] == 'x':
+                        self.end_xbox()
 
                 if bridge_receive[1] == 'next':
                     pass

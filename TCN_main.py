@@ -90,6 +90,8 @@ class Commander():
                                 self.COMMANDER_TCP_SERVER.send_list(['C','exit','s'])
                             elif command_list[1] == 'v':
                                 self.COMMANDER_TCP_SERVER.send_list(['C','exit','v'])
+                            elif command_list[1] == 'x':
+                                self.COMMANDER_TCP_SERVER.send_list(['C','exit','x'])
                             else:
                                 print("Please specify which exit command to use Ex:'exit all'")
 
