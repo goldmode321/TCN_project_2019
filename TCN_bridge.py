@@ -74,7 +74,6 @@ class Bridge:
 ############ XBOX initialize #########
     def xbox_init(self): 
         self.XBOX = TCN_xbox.Xbox_controller()
-        self.xbox_get_data()
 
     def xbox_get_data(self):
         self.XBOX_THREAD = threading.Thread(target = self.xbox_main , daemon = True)
@@ -91,7 +90,7 @@ class Bridge:
             self.XBOX_STEP = move_command[3]
             if self.XBOX_MOVE_STM32 == True:
                 self.STM32_SERVER.send_list(['S','xbox_move',[self.XBOX_X,self.XBOX_Y,self.XBOX_Z]])
-                self.bridge_protocol(self.STM32_SERVER.recv_list())
+                self.STM32_SERVER.recv_list()
             time.sleep(0.05)
 
     def end_xbox(self):
@@ -401,16 +400,18 @@ class Bridge:
                     
 ######################## STM32 & XBOX #################
                 elif bridge_receive[1] == 'xs':
-                    self.COMMANDER_SERVER.send_list([self.XBOX_RUN,self.XBOX_MOVE_STM32,self.XBOX_X,self.XBOX_Y,self.XBOX_Z,self.XBOX_STEP,self.XBOX_THREAD.is_alive()])
+                    print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}\nXBOX thread alive : {}'\
+                        .format(self.XBOX_RUN,self.XBOX_MOVE_STM32,self.XBOX_X,self.XBOX_Y,self.XBOX_Z,self.XBOX_STEP,self.XBOX_THREAD.is_alive()))
                 elif bridge_receive[1] == 'si':
                     if self.STM32_SERVER_RUN == False:
                         self.stm32_init()
-                        self.COMMANDER_SERVER.send_list(['C','next'])
                     else:
-                        self.COMMANDER_SERVER.send_list(['C','m','STM32 run already'])
+                        print('STM32 run already')
+                    self.COMMANDER_SERVER.send_list(['C','next'])
                 elif bridge_receive[1] == 'mwx':
                     self.XBOX_MOVE_STM32 = True
-                    while self.XBOX_MOVE_STM32 and not self.XBOX.joy.Back():
+                    self.xbox_get_data()
+                    while self.XBOX_MOVE_STM32:
                         try:
                             temp_list = self.COMMANDER_UDP_CLIENT.recv_list()
                             if temp_list[0] == 'end':
@@ -423,18 +424,18 @@ class Bridge:
                     self.XBOX_MOVE_STM32 = False
                     self.COMMANDER_SERVER.send_list(['C','next'])
                     
-                elif bridge_receive[1] == 'stop_motor':
+                elif bridge_receive[1] == 'stop':
                     self.STM32_SERVER.send_list(['S','stop'])
 
 ######################## LiDAR #################
                 elif bridge_receive[1] == 'li':
                     if self.LIDAR_SERVER_RUN == False:
                         self.lidar_init()
-                        self.COMMANDER_SERVER.send_list(['C','next'])
                     else:
-                        self.COMMANDER_SERVER.send_list(['C','m','LiDAR run already'])
+                        print('LiDAR run already')
+                    self.COMMANDER_SERVER.send_list(['C','next'])
                 elif bridge_receive[1] == 'gld':
-                    self.COMMANDER_SERVER.send_list([self.LIDAR_DATA])
+                    print(self.LIDAR_DATA)
 
 
 
@@ -442,69 +443,71 @@ class Bridge:
                 elif bridge_receive[1] == 'vi':
                     if self.VISION_SERVER_RUN == False:
                         self.vision_init()
-                        self.COMMANDER_SERVER.send_list(['C','next'])
                     else:
-                        self.COMMANDER_SERVER.send_list(['C','m','Vision run already'])
+                        print('Vision run already')
+                    self.COMMANDER_SERVER.send_list(['C','next'])
                 elif bridge_receive[1] == 'al':
                     self.VISION_SERVER.send_list(['V','al'])
                 elif bridge_receive[1] == 'cc':
                     self.VISION_SERVER.send_list(['V','cc'])
                 elif bridge_receive[1] == 'vs':
-                    self.COMMANDER_SERVER.send_list([self.VISION_SERVER_RUN,self.VISION_THREAD_SERVER_RUN,self.VISION_CLIENT_RUN,self.VISION_THREAD_CLIENT_RUN])
+                    print('Vision server : {}\nVision thread server : {}\nVision client : {}\nVision thread client : {}'\
+                        .format(self.VISION_SERVER_RUN,self.VISION_THREAD_SERVER_RUN,self.VISION_CLIENT_RUN,self.VISION_THREAD_CLIENT_RUN))
                 elif bridge_receive[1] == 'gp':
                     try:
                         if bridge_receive[2] == 'c':
-                            self.bridge_send_vision_data_to_commander()
+                            self.bridge_show_vision_data()
                         elif bridge_receive[2] == 'x':
-                            self.bridge_send_vision_data_to_commander_xbox()
+                            self.bridge_show_vision_data_xbox()
                         elif bridge_receive[2] == 'exit':
-                            self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
+                            self.BRIDGE_SHOW_VISION_DATA_RUN = False
+                            self.XBOX_MOVE_STM32 = False
                     except IndexError:
-                        self.COMMANDER_SERVER.send_list([ self.VISION_STATUS , self.X , self.Y , self.THETA ])
+                        print('status : {} | x : {} | y : {} | theta : {} '.format(self.VISION_STATUS , self.X , self.Y , self.THETA))
                 elif bridge_receive[1] == 'gs':
-                    self.COMMANDER_SERVER.send_list([self.VISION_STATUS])
+                    self.show_vision_status()
                 elif bridge_receive[1] == 'sv':
                     self.VISION_SERVER.send_list(['V','sv'])
                 elif bridge_receive[1] == 'rs':
                     self.VISION_SERVER.send_list(['V','rs'])
                     print('reset vision , please wait 5 second')
                     time.sleep(5)
-                elif bridge_receive[1] == 'bm':
+                elif bridge_receive[1] == 'bm' or bridge_receive[1] == 'um' or bridge_receive[1] == 'kbm':
                     if type(bridge_receive[2]) == int:
                         if bridge_receive[2] >= 0:
-                            self.VISION_SERVER.send_list(['V','bm',int(bridge_receive[2])])
-                            self.bridge_send_vision_data_to_commander_xbox()
+                            self.VISION_SERVER.send_list(['V',bridge_receive[1],int(bridge_receive[2])])
+                            self.bridge_show_vision_data_xbox()
                         else:
                             print('mapid must be positive integer')
                     elif bridge_receive[2] == None:
-                        print('Please specify mapid (bm mapid). Ex : bm 1 ')
+                        print('Please specify mapid (bm mapid). Ex : {} 1 '.format(bridge_receive[1]))
                     elif bridge_receive[2] == 'end':
-                        self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
+                        self.BRIDGE_SHOW_VISION_DATA_RUN = False
                         self.XBOX_MOVE_STM32 = False
-                elif bridge_receive[1] == 'um':
-                    if type(bridge_receive[2]) == int:
-                        if bridge_receive[2] >= 0:
-                            self.VISION_SERVER.send_list(['V','um',int(bridge_receive[2])])
-                            self.bridge_send_vision_data_to_commander_xbox()
-                        else:
-                            print('mapid must be positive integer')
-                    elif bridge_receive[2] == None:
-                        print('Please specify mapid (bm mapid). Ex : bm 1 ')
-                    elif bridge_receive[2] == 'end':
-                        self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
-                        self.XBOX_MOVE_STM32 = False
-                elif bridge_receive[1] == 'kbm':
-                    if type(bridge_receive[2]) == int:
-                        if bridge_receive[2] >= 0:
-                            self.VISION_SERVER.send_list(['V','kbm',int(bridge_receive[2])])
-                            self.bridge_send_vision_data_to_commander_xbox()
-                        else:
-                            print('mapid must be positive integer')
-                    elif bridge_receive[2] == None:
-                        print('Please specify mapid (bm mapid). Ex : bm 1 ')
-                    elif bridge_receive[2] == 'end':
-                        self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
-                        self.XBOX_MOVE_STM32 = False
+                # elif bridge_receive[1] == 'um':
+                #     if type(bridge_receive[2]) == int:
+                #         if bridge_receive[2] >= 0:
+                #             self.VISION_SERVER.send_list(['V','um',int(bridge_receive[2])])
+                #             self.bridge_show_vision_data_xbox()
+                #         else:
+                #             print('mapid must be positive integer')
+                #     elif bridge_receive[2] == None:
+                #         print('Please specify mapid (bm mapid). Ex : bm 1 ')
+                #     elif bridge_receive[2] == 'end':
+                #         self.BRIDGE_SHOW_VISION_DATA_RUN = False
+                #         self.XBOX_MOVE_STM32 = False
+                # elif bridge_receive[1] == 'kbm':
+                #     if type(bridge_receive[2]) == int:
+                #         if bridge_receive[2] >= 0:
+                #             self.VISION_SERVER.send_list(['V','kbm',int(bridge_receive[2])])
+                #             self.bridge_show_vision_data_xbox()
+                #         else:
+                #             print('mapid must be positive integer')
+                #     elif bridge_receive[2] == None:
+                #         print('Please specify mapid (bm mapid). Ex : bm 1 ')
+                #     elif bridge_receive[2] == 'end':
+                #         self.BRIDGE_SHOW_VISION_DATA_RUN = False
+                #         self.XBOX_MOVE_STM32 = False
                         
 
 
@@ -538,299 +541,71 @@ class Bridge:
 
 
 
-    def bridge_send_vision_data_to_commander(self):
-        self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = True
-        while self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN:
+    def bridge_show_vision_data(self):
+        self.BRIDGE_SHOW_VISION_DATA_RUN = True
+        while self.BRIDGE_SHOW_VISION_DATA_RUN:
             try:
-                self.COMMANDER_SERVER.send_list([self.VISION_STATUS , self.X , self.Y , self.THETA ])
-                self.BRIDGE_RECEIVE = self.COMMANDER_SERVER.recv_list()
-                self.bridge_protocol(self.BRIDGE_RECEIVE)
-                # print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C to terminate'.format(self.VISION_STATUS,self.X,self.Y,self.THETA))
+                # self.COMMANDER_SERVER.send_list([self.VISION_STATUS , self.X , self.Y , self.THETA ])
+                # self.BRIDGE_RECEIVE = self.COMMANDER_SERVER.recv_list()
+                # self.bridge_protocol(self.BRIDGE_RECEIVE)
+                receive = self.COMMANDER_UDP_CLIENT.recv_list()
+                if receive == ['end']:
+                    self.BRIDGE_SHOW_VISION_DATA_RUN = False
+                print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C or enter any key to end current process : '\
+                    .format(self.VISION_STATUS,self.X,self.Y,self.THETA))
                 time.sleep(0.1)
             except:
                 print('\nError from Bridge : bridge_send_vision_data_to_commander\n')
                 traceback.print_exc()
                 logging.exception('Got error : ')
-                self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
+                self.BRIDGE_SHOW_VISION_DATA_RUN = False
+        self.COMMANDER_SERVER.send_list(['C','next'])
 
 
-    def bridge_send_vision_data_to_commander_xbox(self):
-        self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = True
+
+    def bridge_show_vision_data_xbox(self):
+        self.BRIDGE_SHOW_VISION_DATA_RUN = True
         self.XBOX_MOVE_STM32 = True
-        while self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN and not self.XBOX.joy.Back():
+        self.xbox_get_data()
+        while self.BRIDGE_SHOW_VISION_DATA_RUN:
             try:
-                self.COMMANDER_SERVER.send_list([self.VISION_STATUS , self.X , self.Y , self.THETA ])
-                self.BRIDGE_RECEIVE = self.COMMANDER_SERVER.recv_list()
-                self.bridge_protocol(self.BRIDGE_RECEIVE)
-                # print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C to terminate'.format(self.VISION_STATUS,self.X,self.Y,self.THETA))
+                receive = self.COMMANDER_UDP_CLIENT.recv_list()
+                if receive == ['end']:
+                    self.BRIDGE_SHOW_VISION_DATA_RUN = False
+                    self.XBOX_RUN = False
+                print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C or enter any key to end current process : '\
+                    .format(self.VISION_STATUS,self.X,self.Y,self.THETA))                
                 time.sleep(0.1)
             except:
                 print('\nError from Bridge : bridge_send_vision_data_to_commander_xbox\n')
                 traceback.print_exc()
                 logging.exception('Got error : ')
-                self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
-                self.XBOX_MOVE_STM32 = False
-        self.BRIDGE_SEND_VISION_DATA_TO_COMMANDER_RUN = False
+                self.BRIDGE_SHOW_VISION_DATA_RUN = False
+                self.XBOX_RUN = False
         self.XBOX_MOVE_STM32 = False
-        self.COMMANDER_SERVER.send_list(['C','gp','exit'])
+        self.COMMANDER_SERVER.send_list(['C','next'])
 
 
 
-'''Portocol'''
-''' "C" to Main , "L" to LiDAR , "S" to STM32 , "G" to GPIO , "X" to xbox, "V" to Vision , "M" to motion '''
-
-###                                                                   ###
-###    global variables                                               ###
-###                                                                   ###
-
-
-commander_server = None
-lidar_server = None
-stm32_server = None
-vision_server = None
-bridge_run = False
-
-
-
-def bridge_init():
-    global commander_server,stm32_server , vision_server , lidar_server , bridge_run
-    try:
-        commander_init()
-        vision_init()
-        lidar_init()
-        stm32_init()
-        bridge_run = True
-        logging.info("Bridge is ready to run ! \n")
-    except:
-        if commander_server != None:
-            commander_server.close()
-        if vision_server != None:
-            vision_server.close()
-        if stm32_server != None:
-            stm32_server.close()
-        bridge_run = False
-        sys.exit(0)
-
-
-###                                                                   ###
-###    Gateway for commander communication. See TCN_main.py           ###
-###                                                                   ###
-def commander_init():
-    global commander_server
-    try:
-        logging.info("Initialize commander server\n")
-        commander_server = TCN_socket.TCP_server(50000,1)
-        commander_server.send_list(['C','next'])
-        logging.info("Commander connection complete !\n")
-
-    except:
-        commander_server.close()
-        traceback.print_exc()
-        logging.info('Bridge initializing fail at commander_init()\n')
-        logging.exception("Got error : \n")
-        
-
-###                                                                            ###
-###    Gateway for Vision module communication. See TCN_vision_main.py         ###
-###                                                                            ###
-
-def vision_init():
-    global vision_server,commander_server
-    try:
-        logging.info("Initialize vision server\n")
-        vision_server = TCN_socket.TCP_server(50001,1)
-        vision_data = vision_server.recv_list()
-        if vision_data == ['V','status','Alive']:
-            logging.info("Vision communication successfully established !\ncommunication center get : {} \n".format(vision_data) )
-            commander_server.send_list(['C','next'])
+    def show_vision_status(self):
+        if self.VISION_STATUS == 0:
+            print("Vision module status : {} | Vision module is booting".format(self.VISION_STATUS))
+        elif self.VISION_STATUS == 1:
+            print("Vision module status : {} | Vision module is waiting for 'st $mapid' command".format(self.VISION_STATUS))
+        elif self.VISION_STATUS == 2:
+            print("Vision module status : {} | Vision module is loading data ".format(self.VISION_STATUS))
+        elif self.VISION_STATUS == 3:
+            print('Vision module status : {} | Please move slowly, fp-slam is searching a set of best images to initialize'.format(self.VISION_STATUS))
+        elif self.VISION_STATUS == 4:
+            print('Vision module status : {} | System is working normaaly'.format(self.VISION_STATUS))
+        elif self.VISION_STATUS == 5:
+            print('Vision module status : {} | Lost Lost Lost'.format(self.VISION_STATUS))
         else:
-            print('Undefined communication error of Vision module, please check test message')
-            logging.info("Undefined communication error of Vision module, please check test message\n")
-            raise KeyboardInterrupt      
-    except:
-        traceback.print_exc()
-        logging.info('Bridge initializing fail at vision_init()\n')
-        logging.exception("Got error : \n")
-
-
-
-###                                                                            ###
-###    Gateway for RPLiDAR communication. See TCN_vision_main.py               ###
-###                                                                            ###
-
-def lidar_init():
-    global lidar_server,commander_server
-    try:
-        logging.info("Initialize lidar server\n")
-        lidar_server = TCN_socket.TCP_server(50002,1)
-        lidar_data = lidar_server.recv_list()
-        if lidar_data == ['L','status','Good']:
-            logging.info("Lidar communication successfully established !\ncommunication center get : {} \n".format(lidar_data) )
-            commander_server.send_list(['C','next'])
-        else:
-            print('Undefined communication error of Vision module, please check test message')
-            logging.info("Undefined communication error of Vision module, please check test message\n")
-            raise KeyboardInterrupt      
-    except:
-        traceback.print_exc()
-        logging.info('Bridge initializing fail at lidar_init()\n')
-        logging.exception("Got error : \n")
+            print('Unknown status code : {}'.format(self.VISION_STATUS))
 
 
 
 
-
-###                                                                   ###
-###    Gateway for STM32 communication. See TCN_STM32_main.py         ###
-###                                                                   ###
-
-def stm32_init():
-    global stm32_server
-    try:
-        logging.info("Initialize STM32 server\n")
-        stm32_server = TCN_socket.TCP_server(50003,1)
-        stm32_data = stm32_server.recv_list()
-        bridge_potorcol(stm32_data)
-        # if stm32_data == ['S',1,2,3]:
-        #     print("STM32 communication successfully established !\ncommunication center get : {}".format(stm32_data) )
-        #     stm32_server.send_list(['S','T','M',3,2])
-        #     print("Send back ['S','T','M',3,2] for double check")
-        #     commander_server.send_list(['C','next'])
-        # else:
-        #     print('Undefined communication error of STM32, please check test message')
-        #     raise KeyboardInterrupt      
-    except:
-        stm32_server.close()
-        traceback.print_exc()
-        print('Bridge initializing fail at stm32_init()')
-        logging.info('Bridge initializing fail at stm32_init()\n')
-        logging.exception("Got error : \n")
-
-
-###                                                                   ###
-###    Portocol for bridge                                            ###
-###                                                                   ###
-
-'''
-[ 'C' , 'exit ']                received
-    ['S', 'exit' ]              send to STM
-
-[ 'C' , 'mwx' , [x,y,z] ]       received
-    ['S' ,'move', [x,y,z] ]     send to STM
-        ['S' , next]            received
-            ['C' , 'next']      send to commander
-
-[ 'C' , 'stop_motor ']          received
-    ['S' , 'stop' ]             send to STM
-
-
-
-
-'''
-'''
-['S' , 'next']
-    ['C' , 'next' ]
-
-'''
-
-def bridge_potorcol(receive_data):
-    global commander_server , stm32_server , vision_server , bridge_run
-    '''First, get commander command (TCN_main.py)'''
-    try:
-        if receive_data == None:
-            print('socket got problem')
-
-        elif receive_data[0] == 'C':
-            if receive_data[1] == 'exit':
-                if receive_data[2] == 'all':
-                    stm32_server.send_list(['S','exit'])
-                    vision_server.send_list(['V','exit'])
-                    lidar_server.send_list(['L','exit'])
-                    print('All server will be close in 3 second')
-                    time.sleep(3)
-                    commander_server.close()
-                    stm32_server.close()
-                    vision_server.close()
-                    lidar_server.close()
-                    bridge_run = False
-                
-            # elif commander_data[1] == 'key_move':
-            #     stm32_server.send_list(['S','move',[ commander_data[2],commander_data[3],commander_data[4] ] ])
-            
-            elif receive_data[1] == 'mwx':
-                stm32_server.send_list(['S','move',receive_data[2]])
-                receive_data = stm32_server.recv_list()
-                bridge_potorcol(receive_data)
-
-            elif receive_data[1] == 'gld':
-                lidar_server.send_list(['L','gld'])
-                lidar_data = lidar_server.recv_list()
-                logging.info("gld : received from lidar : {} ".format(lidar_data))
-                bridge_potorcol(lidar_data)
-                
-
-            elif receive_data[1] == 'stop_motor':
-                stm32_server.send_list(['S','stop'])
-
-        elif receive_data[0] == 'S':
-            if receive_data[1] == 'next':
-                commander_server.send_list(['C','next'])
-
-
-
-        elif receive_data[0] == 'V':
-            if receive_data[1] == 'next':
-                commander_server.send_list(['C','next'])      
-
-        elif receive_data[0] == 'L':
-            if receive_data[1] == 'next':
-                commander_server.send_list(['C','next']) 
-            
-            if receive_data[1] == 'gld':
-                commander_server.send_list(['C','gld',receive_data[2]])
-
-        else:
-            print('{} received . Wrong potorcol  !'.format(receive_data))
-            logging.info('{} received . Wrong potorcol  !'.format(receive_data))
-            
-
-    except:
-        commander_server.close()
-        stm32_server.close()
-        vision_server.close()
-        traceback.print_exc()
-        logging.exception("Got error : \n")
-    
-
-
-
-
-###                                                                   ###
-###    Waiting for command from TCN_main.py                           ###
-###                                                                   ###
-def bridge_main():
-    global commander_server,stm32_server , vision_server , bridge_run
-
-    while bridge_run:
-        try:
-            commander_data = commander_server.recv_list()
-            logging.info("Bridge receive {} from commander\n".format(commander_data))
-            bridge_potorcol(commander_data)
-
-        except:
-            commander_server.close()
-            vision_server.close()
-            stm32_server.close()
-            traceback.print_exc()
-            logging.exception("Got error : \n")
-            bridge_run = False
-
-def end_bridge():
-    commander_server.close()
-    vision_server.close()
-    stm32_server.close()
-    logging.info("Bridge close successfully")
-            
 
 
 
@@ -839,33 +614,4 @@ if __name__ == "__main__":
     # bridge_main()
     # end_bridge()
     Bridge()
-
-
-# time.sleep(5)
-# commander_server.close()
-# stm32_server.close()
-
-
-
-
-
-
-
-
-
-
-
-
-# class bridge_portocol(object):
-
-#     def Command_potorcol(self,command):
-#         if command[0] == 'C':
-#             if command[1] == 'exit':
-#                 stm32_server.send_list['S',command[1]]
-#                 commander_server.close()
-#                 stm32_server.close()
-
-#         else:
-#             print('Wrong potorcol from commander ')
-
 

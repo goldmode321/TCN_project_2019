@@ -1,3 +1,5 @@
 {
-    "python.pythonPath": "D:\\WorkSoftware\\Anoconda\\envs\\TCN\\python.exe"
+    "python.pythonPath": "D:\\WorkSoftware\\Anoconda\\envs\\TCN\\python.exe",
+    "python.linting.pylintEnabled": true,
+    "python.linting.enabled": true
 }

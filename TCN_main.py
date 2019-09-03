@@ -29,11 +29,9 @@ class Commander():
             self.PROCESS_BRIDGE = subprocess.Popen('sudo python3 TCN_bridge.py',shell = True, start_new_session = True)
             print('##### Initializing communication center #####')
             logging.info("Bridge initializing")
-            print("Establish TCP connection to communication center\nSend test data ['C',1,2,3]")
             self.COMMANDER_UDP_SERVER = TCN_socket.UDP_server(50001)
             self.COMMANDER_TCP_SERVER = TCN_socket.TCP_server(50000)
-            commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
-            self.commander_protocol(commander_receive) # Waiting for [ 'C' , 'next' ]
+            self.COMMANDER_TCP_SERVER.recv_list()
             logging.info("Bridge - commander initialization completed\n")
             self.COMMANDER_TCP_SERVER_RUN = True
         else:
@@ -99,54 +97,64 @@ class Commander():
                     ################ LiDAR ###############
                     elif command == 'li':
                         self.COMMANDER_TCP_SERVER.send_list(['C','li'])
-                        self.commander_protocol(self.COMMANDER_TCP_SERVER.recv_list())
+                        self.COMMANDER_TCP_SERVER.recv_list()
                     elif command == 'gld':
                         self.COMMANDER_TCP_SERVER.send_list(['C','gld'])
-                        print(self.COMMANDER_TCP_SERVER.recv_list(16384))
 
 
                     ################ Vision #############
                     elif command == 'vi':
                         self.COMMANDER_TCP_SERVER.send_list(['C','vi'])
-                        self.commander_protocol(self.COMMANDER_TCP_SERVER.recv_list())
+                        self.COMMANDER_TCP_SERVER.recv_list()
                     elif command == 'vs':
                         self.COMMANDER_TCP_SERVER.send_list(['C','vs'])
-                        commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
-                        print('Vision server : {}\nVision thread server : {}\nVision client : {}\nVision thread client : {}'.format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3]))
                     elif command == 'gs':
                         self.COMMANDER_TCP_SERVER.send_list(['C','gs'])
-                        self.show_vision_status(self.COMMANDER_TCP_SERVER.recv_list())
+                    elif command == 'al':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','al'])
+                    elif command == 'cc':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','cc'])
                     elif command == 'gp':
                         if len(command_list) > 1:
-                            if command_list[1] == 'c':
-                                self.COMMANDER_TCP_SERVER.send_list(['C','gp','c'])
-                                self.show_vision_data()
-                            elif command_list[1] == 'x':
-                                self.COMMANDER_TCP_SERVER.send_list(['C','gp','x'])
-                                self.show_vision_data()
+                            self.COMMANDER_TCP_SERVER.send_list(['C','gp',command_list[1]])
+                            try:
+                                input("Use Ctrl+C or enter any key to end current process : ")
+                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            except:
+                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            self.COMMANDER_TCP_SERVER.recv_list()
                         else:
                             self.COMMANDER_TCP_SERVER.send_list(['C','gp'])
-                            commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
-                            print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C to terminate'.format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3]))
+                    elif command == 'bm' or command == 'um' or command == 'kbm':
+                        if len(command_list) > 1:
+                            self.COMMANDER_TCP_SERVER.send_list(['C', command , command_list[1] ])
+                            try:
+                                input("Use Ctrl+C or enter any key to end current process : ")
+                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            except:
+                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            self.COMMANDER_TCP_SERVER.recv_list()
+                        else:
+                            print('Please specify mapid')
 
                     ############### STM32 & XBOX ##############
                     elif command == 'xs':
                         self.COMMANDER_TCP_SERVER.send_list(['C','xs'])
-                        commander_receive = self.COMMANDER_TCP_SERVER.recv_list()
-                        print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}\nXBOX thread alive : {}'\
-                            .format(commander_receive[0],commander_receive[1],commander_receive[2],commander_receive[3],commander_receive[4],commander_receive[5],commander_receive[6]))
                     elif command == 'si':
                         self.COMMANDER_TCP_SERVER.send_list(['C','si'])
-                        self.commander_protocol(self.COMMANDER_TCP_SERVER.recv_list())                   
+                        self.COMMANDER_TCP_SERVER.recv_list()                   
                     elif command == 'mwx':
                         try:
                             self.COMMANDER_TCP_SERVER.send_list(['C','mwx'])
-                            self.COMMANDER_TCP_SERVER.recv_list()
+                            input("Use Ctrl+C or enter any key to end current process : ")
+                            self.COMMANDER_UDP_SERVER.send_list(['end'])
                         except KeyboardInterrupt:
                             print('KeyboardInterrupt')
                             self.COMMANDER_UDP_SERVER.send_list(['end'])
-                            self.COMMANDER_TCP_SERVER.recv_list()
                             time.sleep(0.5)
+                        self.COMMANDER_TCP_SERVER.recv_list()
+                    elif command == 'stop':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','stop'])
                     
             except KeyboardInterrupt:
                 print('Keyboard Interrupt')
@@ -196,7 +204,11 @@ class Commander():
         print("exit v : Close vision")
 
         print("\nSTM32 relative\n")
+        print("si : Initialize STM32")
+        print("exit s : Close STM32")
+        print("stop : stop motor")
         print("mwx : Enable xbox control")
+        
 
 
     def end_commander(self):
@@ -243,181 +255,6 @@ class Commander():
             print('Vision module status : {} | Lost Lost Lost'.format(vision_status[0]))
         else:
             print('Unknown status code : {}'.format(vision_status[0]))
-
-
-
-process_stm32 = None
-process_bridge = None
-process_vision = None
-process_lidar = None
-process_algorithm = None
-commander_client = None
-commander_run = False
-xbox = None
-
-###                                                                   ###
-###    Preview function                                               ###
-###                                                                   ###
-
-def help_menu():
-    print(" exit : Quit software ")                 # [ 'C' , 'exit ']
-    print(" xt : Xbox test ")                       # None
-    print(" mwx : Xbox remote control ")            # [ 'C' , 'xbox' , [x,y,z] ]
-    print(" xtg : Xbox test, gpio ")
-    print(" gld : Get current lidar data ")
-    
-
-
-###                                                                   ###
-###    Portocol for commander                                         ###
-###                                                                   ###
-'''
-['C' , 'next' ]
-
-'''
-def commander_portocol(commander_receive):
-    global commander_client,commander_run,xbox,process_bridge,process_stm32
-
-    logging.info("Commander received : {}".format(commander_receive))
-
-    if commander_receive[0] == 'C':
-        if commander_receive[1] == 'next':
-            pass
-
-        if commander_receive[1] == 'gld':
-            print(commander_receive[2])
-
-
-
-###                                                                   ###
-###    Initialize xbox. See TCN_xbox.py                               ###
-###                                                                   ###
-def xbox_init():
-    global xbox
-    xbox = TCN_xbox.Xbox_controller()
-    logging.info('Xbox start without error')
-
-
-###                                                                   ###
-###    Run TCN_bridge.py (so called "Communication center (CC) ")     ###
-###                                                                   ###
-def commander_init():
-    try:
-        global commander_client,commander_run, process_bridge, process_stm32 , process_vision , process_lidar , process_algorithm
-        
-        process_bridge = subprocess.Popen('python3 TCN_bridge.py',shell = True)
-        print('##### Initializing communication center #####')
-        logging.info("Bridge - commander initialize")
-        time.sleep(1)    # Wait some time for assuming Communication center(CC) work  稍微delay，以確保CC正常運作
-        print("Establish TCP connection to communication center\nSend test data ['C',1,2,3]")
-        commander_client = TCN_socket.TCP_client(50000)
-        commander_receive = commander_client.recv_list()
-        commander_portocol(commander_receive) # Waiting for [ 'C' , 'next' ]
-        logging.info("Bridge - commander initialization completed\n")
-
-        print('\n\n##### Initializing Vision module #####')
-        logging.info("Vision module initialize")
-        process_vision = subprocess.Popen('python3 TCN_vision_main.py',shell = True)
-        commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
-        commander_portocol(commander_receive)
-        logging.info("Vision module initialization complete\n")
-
-
-        print('\n\n##### Initializing RPLiDAR #####')
-        logging.info("RPLiDAR initialize")
-        process_lidar = subprocess.Popen('python3 TCN_rplidar_main.py',shell = True)
-        commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
-        commander_portocol(commander_receive)
-        logging.info("Vision module initialization complete\n")
-
-
-        print('\n\n##### Initializing STM32 #####')
-        logging.info("STM32 initialize")
-        process_stm32 = subprocess.Popen('python3 TCN_STM32_main.py',shell = True)
-        commander_receive = commander_client.recv_list() # Waiting for [ 'C' , 'next' ]
-        commander_portocol(commander_receive)
-        logging.info("STM32 initialization complete\n")
-
-
-
-        commander_run = True
-
-            
-
-
-    except:
-        if process_algorithm != None:
-            process_algorithm.kill()
-        if process_stm32 != None:
-            process_stm32.kill()
-        if process_lidar != None:
-            process_lidar.kill()
-        if process_vision != None:
-            process_vision.kill()
-        if process_bridge != None:
-            process_bridge.kill()            
-        commander_client.close()
-        xbox.close()
-        traceback.print_exc()
-
-        logging.exception("Got error : \n")
-
-
-
-
-    # p_bridge = subprocess.Popen('python TCN_STM32_main.py',shell = True)
-    # print('Initializing STM32 motor controller')
-
-
-###                                                                   ###
-###     Waiting for User Command                                      ###
-###                                                                   ###
-def main():
-    global commander_client,commander_run, process_bridge, process_stm32 , process_vision , process_lidar , process_algorithm
-    print('\n\n @@@ Program is all set, now is ready to run @@@')
-
-    while commander_run:
-        try:
-            command = input('\nPlease enter command (Enter "h" for help menu) : ')
-            if command == 'h':
-                help_menu()
-
-            elif command == 'exit':
-                commander_client.send_list(['C','exit','all'])
-                commander_run = False
-
-            elif command == 'xt':
-                xbox.xbox_test()
-
-            elif command == 'mwx':
-                while not xbox.joy.Back():
-                    move_command = xbox.xbox_control()
-                    commander_client.send_list(['C','mwx',move_command])
-                    commander_receive = commander_client.recv_list()
-                    commander_portocol(commander_receive)
-                commander_client.send_list(['C','stop_motor'])
-
-            elif command == 'gld':
-                commander_client.send_list(['C','gld'])
-                commander_receive = commander_client.recv_list()
-                commander_portocol(commander_receive)
-
-
-            else:
-                commander_client.send_list(['C',command])
-        
-        except:
-            commander_client.send_list(['C','exit','all'])
-            commander_run = False
-            
-    commander_client.close()
-    xbox.close()
-    time.sleep(6)
-    print('All program terminated')
-
-
-
-
 
 
 

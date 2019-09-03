@@ -123,13 +123,40 @@ except:
 #         client.close()
 #         break
 
-import TCN_socket
-import time
-client = TCN_socket.TCP_client(50000)
-try:
-    time.sleep(10)
-    client.send_list([321])
-except KeyboardInterrupt:
-    print('keyboard')
 
-client.close()
+# import TCN_socket
+# import time
+# import traceback
+# client = TCN_socket.TCP_client(50000)
+# try:
+#     try:
+#         time.sleep(10)
+#         client.send_list([321])
+#     except KeyboardInterrupt:
+#         print('keyboard')
+# except:
+#     traceback.print_exc()
+# client.close()
+
+
+
+# try:
+#     input('enter : ')
+#     print(1)
+# except:
+#     print(2)
+
+import TCN_socket
+import pickle
+import dill
+import time
+def a():
+    print(1)
+msg = dill.dumps(a)
+print(msg)
+server =TCN_socket.TCP_server(50000)
+server.connection[0].send(msg)
+time.sleep(0.5)
+server.close()
+
+

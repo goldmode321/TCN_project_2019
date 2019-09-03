@@ -93,11 +93,29 @@ if __name__ == "__main__":
 #         break
 
 
-import TCN_socket
-server = TCN_socket.TCP_server(50000)
-try:
-    server.recv_list()
-except KeyboardInterrupt:
-    print('keyboard')
+# import TCN_socket
+# import traceback
+# server = TCN_socket.TCP_server(50000)
+# try:
+#     try:
+#         server.recv_list()
+#     except KeyboardInterrupt:
+#         print('keyboard')
+# except:
+#     traceback.print_exc()
+# server.close()
 
-server.close()
+import TCN_socket
+import pickle
+import dill
+client = TCN_socket.TCP_client(50000)
+recv = client.sock.recv(4096)
+recv = dill.loads(recv)
+recv() 
+client.close()
+
+
+
+
+
+
