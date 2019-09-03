@@ -105,14 +105,26 @@ if __name__ == "__main__":
 #     traceback.print_exc()
 # server.close()
 
+# import TCN_socket
+# import pickle
+# import dill
+# client = TCN_socket.TCP_client(50000)
+# recv = client.sock.recv(4096)
+# recv = dill.loads(recv)
+# recv() 
+# client.close()
+
+
 import TCN_socket
-import pickle
-import dill
-client = TCN_socket.TCP_client(50000)
-recv = client.sock.recv(4096)
-recv = dill.loads(recv)
-recv() 
-client.close()
+import time
+client = TCN_socket.UDP_client(55555)
+while True:
+    try:
+        receive = client.recv_list()
+        print(receive)
+        time.sleep(0.1)
+    except:
+        break
 
 
 

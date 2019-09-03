@@ -25,6 +25,7 @@ class Bridge:
         self.XBOX_Z = 0
         self.XBOX_STEP = 0
         self.XBOX_MOVE_STM32 = False
+        self.XBOX_ON = False
 
         # Commander initail variables
         self.COMMANDER_SERVER_RUN = False
@@ -74,6 +75,7 @@ class Bridge:
 ############ XBOX initialize #########
     def xbox_init(self): 
         self.XBOX = TCN_xbox.Xbox_controller()
+        self.XBOX_ON = True
 
     def xbox_get_data(self):
         self.XBOX_THREAD = threading.Thread(target = self.xbox_main , daemon = True)
@@ -91,11 +93,12 @@ class Bridge:
             if self.XBOX_MOVE_STM32 == True:
                 self.STM32_SERVER.send_list(['S','xbox_move',[self.XBOX_X,self.XBOX_Y,self.XBOX_Z]])
                 self.STM32_SERVER.recv_list()
-            time.sleep(0.05)
+            time.sleep(0.01)
 
     def end_xbox(self):
         self.XBOX_RUN = False
         self.XBOX_MOVE_STM32 = False
+        self.XBOX_ON = False
         self.XBOX.close()
 
 
@@ -106,7 +109,7 @@ class Bridge:
         try:
             time.sleep(0.2) # Make sure server initialize first
             logging.info("Initialize commander client\n")
-            self.COMMANDER_UDP_CLIENT = TCN_socket.UDP_client(50001)
+            self.COMMANDER_UDP_SERVER = TCN_socket.UDP_server(50001)
             self.COMMANDER_SERVER = TCN_socket.TCP_client(50000)
             self.COMMANDER_SERVER.send_list(['C','next'])
             logging.info("Commander connection complete !\n")
@@ -120,7 +123,7 @@ class Bridge:
             logging.exception("Got error : \n")
 
     def end_commander_server(self):
-        self.COMMANDER_UDP_CLIENT.close()
+        self.COMMANDER_UDP_SERVER.close()
         self.COMMANDER_SERVER.close()
         self.COMMANDER_SERVER_RUN = False
         logging.info('End commander client')
@@ -400,30 +403,37 @@ class Bridge:
                     
 ######################## STM32 & XBOX #################
                 elif bridge_receive[1] == 'xs':
-                    print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}\nXBOX thread alive : {}'\
-                        .format(self.XBOX_RUN,self.XBOX_MOVE_STM32,self.XBOX_X,self.XBOX_Y,self.XBOX_Z,self.XBOX_STEP,self.XBOX_THREAD.is_alive()))
+                    print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}'\
+                        .format(self.XBOX_RUN,self.XBOX_MOVE_STM32,self.XBOX_X,self.XBOX_Y,self.XBOX_Z,self.XBOX_STEP))
                 elif bridge_receive[1] == 'si':
                     if self.STM32_SERVER_RUN == False:
                         self.stm32_init()
                     else:
                         print('STM32 run already')
                     self.COMMANDER_SERVER.send_list(['C','next'])
+                elif bridge_receive[1] == 'xi':
+                    if self.XBOX_ON == False:
+                        self.xbox_init()
+                    else:
+                        print('XBOX run already')
+                    self.COMMANDER_SERVER.send_list(['C','next'])
                 elif bridge_receive[1] == 'mwx':
                     self.XBOX_MOVE_STM32 = True
                     self.xbox_get_data()
                     while self.XBOX_MOVE_STM32:
                         try:
-                            temp_list = self.COMMANDER_UDP_CLIENT.recv_list()
-                            if temp_list[0] == 'end':
+                            receive = self.COMMANDER_UDP_SERVER.recv_list()
+                            if receive != None:
                                 self.XBOX_MOVE_STM32 = False
                             else:
                                 self.XBOX_MOVE_STM32 = True  
                             time.sleep(0.1)
                         except TypeError:
                             pass
+                        except:
+                            self.XBOX_MOVE_STM32 = False
                     self.XBOX_MOVE_STM32 = False
                     self.COMMANDER_SERVER.send_list(['C','next'])
-                    
                 elif bridge_receive[1] == 'stop':
                     self.STM32_SERVER.send_list(['S','stop'])
 
@@ -545,11 +555,8 @@ class Bridge:
         self.BRIDGE_SHOW_VISION_DATA_RUN = True
         while self.BRIDGE_SHOW_VISION_DATA_RUN:
             try:
-                # self.COMMANDER_SERVER.send_list([self.VISION_STATUS , self.X , self.Y , self.THETA ])
-                # self.BRIDGE_RECEIVE = self.COMMANDER_SERVER.recv_list()
-                # self.bridge_protocol(self.BRIDGE_RECEIVE)
-                receive = self.COMMANDER_UDP_CLIENT.recv_list()
-                if receive == ['end']:
+                receive = self.COMMANDER_UDP_SERVER.recv_list()
+                if receive != None:
                     self.BRIDGE_SHOW_VISION_DATA_RUN = False
                 print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C or enter any key to end current process : '\
                     .format(self.VISION_STATUS,self.X,self.Y,self.THETA))
@@ -569,13 +576,15 @@ class Bridge:
         self.xbox_get_data()
         while self.BRIDGE_SHOW_VISION_DATA_RUN:
             try:
-                receive = self.COMMANDER_UDP_CLIENT.recv_list()
-                if receive == ['end']:
+                receive = self.COMMANDER_UDP_SERVER.recv_list()
+                if receive != None:
                     self.BRIDGE_SHOW_VISION_DATA_RUN = False
                     self.XBOX_RUN = False
                 print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C or enter any key to end current process : '\
                     .format(self.VISION_STATUS,self.X,self.Y,self.THETA))                
                 time.sleep(0.1)
+            except TypeError:
+                pass
             except:
                 print('\nError from Bridge : bridge_send_vision_data_to_commander_xbox\n')
                 traceback.print_exc()

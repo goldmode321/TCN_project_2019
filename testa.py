@@ -146,17 +146,25 @@ except:
 # except:
 #     print(2)
 
-import TCN_socket
-import pickle
-import dill
-import time
-def a():
-    print(1)
-msg = dill.dumps(a)
-print(msg)
-server =TCN_socket.TCP_server(50000)
-server.connection[0].send(msg)
-time.sleep(0.5)
-server.close()
+# import TCN_socket
+# import pickle
+# import dill
+# import time
+# def a():
+#     print(1)
+# msg = dill.dumps(a)
+# print(msg)
+# server =TCN_socket.TCP_server(50000)
+# server.connection[0].send(msg)
+# time.sleep(0.5)
+# server.close()
 
+import TCN_socket
+server = TCN_socket.UDP_server(55555)
+while True:
+    try:
+        input('321  : ')
+        server.send_list(['EEEEEEEEEEEEEEEEEE'])
+    except:
+        break
 

@@ -29,7 +29,7 @@ class Commander():
             self.PROCESS_BRIDGE = subprocess.Popen('sudo python3 TCN_bridge.py',shell = True, start_new_session = True)
             print('##### Initializing communication center #####')
             logging.info("Bridge initializing")
-            self.COMMANDER_UDP_SERVER = TCN_socket.UDP_server(50001)
+            self.COMMANDER_UDP_CLIENT = TCN_socket.UDP_client(50001)
             self.COMMANDER_TCP_SERVER = TCN_socket.TCP_server(50000)
             self.COMMANDER_TCP_SERVER.recv_list()
             logging.info("Bridge - commander initialization completed\n")
@@ -54,7 +54,7 @@ class Commander():
         self.COMMANDER_RUN = True
         while self.COMMANDER_RUN:
             try:
-                command = input("Please enter command , enter 'h' for help : ")
+                command = input("\nPlease enter command , enter 'h' for help : ")
                 logging.info('Command : {}'.format(command))
                 command_list = command.lower().split() #splits the input string on spaces
                 command = command_list[0]
@@ -79,7 +79,7 @@ class Commander():
                                 print('Commander server will be close in 5 second')
                                 time.sleep(5)
                                 self.COMMANDER_TCP_SERVER.close()
-                                self.COMMANDER_UDP_SERVER.close()
+                                self.COMMANDER_UDP_CLIENT.close()
                                 self.COMMANDER_TCP_SERVER = None
                                 self.COMMANDER_TCP_SERVER_RUN = False
                             elif command_list[1] == 'l':
@@ -119,9 +119,9 @@ class Commander():
                             self.COMMANDER_TCP_SERVER.send_list(['C','gp',command_list[1]])
                             try:
                                 input("Use Ctrl+C or enter any key to end current process : ")
-                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                                self.COMMANDER_UDP_CLIENT.send_list(['end'])
                             except:
-                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                                self.COMMANDER_UDP_CLIENT.send_list(['end'])
                             self.COMMANDER_TCP_SERVER.recv_list()
                         else:
                             self.COMMANDER_TCP_SERVER.send_list(['C','gp'])
@@ -130,9 +130,9 @@ class Commander():
                             self.COMMANDER_TCP_SERVER.send_list(['C', command , command_list[1] ])
                             try:
                                 input("Use Ctrl+C or enter any key to end current process : ")
-                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                                self.COMMANDER_UDP_CLIENT.send_list(['end'])
                             except:
-                                self.COMMANDER_UDP_SERVER.send_list(['end'])
+                                self.COMMANDER_UDP_CLIENT.send_list(['end'])
                             self.COMMANDER_TCP_SERVER.recv_list()
                         else:
                             print('Please specify mapid')
@@ -147,15 +147,19 @@ class Commander():
                         try:
                             self.COMMANDER_TCP_SERVER.send_list(['C','mwx'])
                             input("Use Ctrl+C or enter any key to end current process : ")
-                            self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            self.COMMANDER_UDP_CLIENT.send_list(['end'])
                         except KeyboardInterrupt:
                             print('KeyboardInterrupt')
-                            self.COMMANDER_UDP_SERVER.send_list(['end'])
+                            self.COMMANDER_UDP_CLIENT.send_list(['end'])
                             time.sleep(0.5)
                         self.COMMANDER_TCP_SERVER.recv_list()
                     elif command == 'stop':
                         self.COMMANDER_TCP_SERVER.send_list(['C','stop'])
-                    
+                    elif command == 'xi':
+                        self.COMMANDER_TCP_SERVER.send_list(['C','xi'])
+                        self.COMMANDER_TCP_SERVER.recv_list()   
+            
+                time.sleep(0.1)
             except KeyboardInterrupt:
                 print('Keyboard Interrupt')
                 self.end_commander()
@@ -207,8 +211,12 @@ class Commander():
         print("si : Initialize STM32")
         print("exit s : Close STM32")
         print("stop : stop motor")
-        print("mwx : Enable xbox control")
         
+        print("\nXBOX relative\n")
+        print("mwx : Enable xbox control")
+        print("xi : Initialize xbox ")
+        print("xs : Show xbox status")
+        print("exit x : Close xbox")
 
 
     def end_commander(self):
@@ -217,7 +225,7 @@ class Commander():
             print('All process will be closed in 5 second')
             time.sleep(5)
             self.COMMANDER_TCP_SERVER.close()
-            self.COMMANDER_UDP_SERVER.close()
+            self.COMMANDER_UDP_CLIENT.close()
             self.COMMANDER_TCP_SERVER = None
         self.COMMANDER_TCP_SERVER_RUN = False
         self.COMMANDER_RUN = False

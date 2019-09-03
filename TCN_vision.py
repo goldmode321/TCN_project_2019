@@ -68,7 +68,7 @@ class Vision:
         logging.info('Thread running')
 
     def send_vision_status(self):
-        while self.VISION_CLIENT_RUN:
+        while self.VISION_THREAD_RUN:
             if self.RESET_FALG == True:
                 time.sleep(4.8)
                 self.RESET_FALG = False
@@ -145,6 +145,7 @@ class Vision:
         logging.info(" Vision module disconnect \n")
 
     def end_background_thread(self):
+        self.VISION_THREAD_RUN = False
         self.VISION_THREAD_CLIENT.send_list([self.x , self.y , self.theta , self.status , self.VISION_CLIENT_RUN , self.VISION_THREAD_RUN])
         self.VISION_THREAD_CLIENT.close()
 
