@@ -161,10 +161,12 @@ except:
 
 import TCN_socket
 server = TCN_socket.UDP_server(55555)
-while True:
+RUN = True
+while RUN:
     try:
-        input('321  : ')
-        server.send_list(['EEEEEEEEEEEEEEEEEE'])
+        cmd = input('321  : ')
+        if cmd == 'e':
+            break
     except:
         break
 

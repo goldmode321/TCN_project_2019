@@ -1,6 +1,6 @@
 import RPi.GPIO as gpio 
 import time
-import TCN_socket as tcns
+import tcn_socket as tcns
 
 # The input can be BOARD and BCM , refer to definded pin number 
 gpio.setmode(gpio.BCM) 
@@ -11,7 +11,7 @@ gpio.setwarnings(False)
 # Channal for our system to check if everything work well.
 tcns.UDP_client(50001)
 
-class STM32_power(object):
+class Stm32Power(object):
     ''' Class for turn on or off the power of STM32 '''
 
     def __init__(self, pin_power = 4 , pin_check = 27):
@@ -31,7 +31,7 @@ class STM32_power(object):
         time.sleep(0.5) # Make sure the Relay is off
         return gpio.input(self.pin_check)
 
-class led(object):
+class Led(object):
     '''Class for turn on led (pin 17) '''
 
     def __init__(self, pin = 17):
@@ -51,6 +51,6 @@ class led(object):
 
      
 if __name__ == "__main__":
-    STM32_power = STM32_power()
+    STM32_power = Stm32Power()
     STM32_power.on()
     STM32_power.off()

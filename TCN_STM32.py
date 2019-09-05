@@ -1,110 +1,124 @@
-import TCN_socket
+'''
+Only usable for special motor controller board
+whieh core is stm32
+'''
+
 import threading
 import traceback
 import sys
 import time
 import logging
 import serial
-from TCN_gpio import STM32_power 
+from tcn_gpio import Stm32Power
+import tcn_socket
 
 
 '''Initial section of STM32 '''
 # stm32 = None
 # stm32_client = None
-# KEEP_RUNNING = False
+# stm32_run = False
 
 
 
-class STM32_command(object):
+class Stm32Command():
     """ class only use for communicate with STM32 on Raspberry PI 3 """
-    
+
     # Parameters below can be used for entirly control whole function
-    # AUTO_DETECT_PORT = True
-    # USB_PORT_NUM = 0
+    # auto_detect_port = True
+    # usb_port_num = 0
     # USB_port_path = "/dev/ttyUSB"
     # baudrate = 115200
 
 
-    def __init__(self, USB_port_path = "/dev/ttyUSB",AUTO_DETECT_PORT = True, USB_port_num = 0, baudrate = 115200, timeout =1):
+    def __init__(self, usb_port_path="/dev/ttyUSB", auto_detect_port=True, usb_port_num=0, baudrate=115200, timeout=1):
         '''When "STM32_command" is called, this function automatically run'''
         # Initial parameters 
-        logging.basicConfig(filename='STM32_main.log',filemode = 'w',level =logging.INFO)
-        self.USB_PORT_NUM = USB_port_num # Initial port to scan (0)
-        self.USB_port_path = USB_port_path # Default raspbian tty path is "/dev/ttyUSB"
-        self.USB_PORT_PATH = self.USB_port_path + str(self.USB_PORT_NUM) # Full path for scanning USB
-        self.BAUDRATE = baudrate # Baudrate for STM32 is 115200. If STM32 configuration changed, this should be change,too
+        logging.basicConfig(filename='STM32_main.log', filemode='w', level=logging.INFO)
+        self.usb_port_num = usb_port_num # Initial port to scan (0)
+        self.usb_port_path = usb_port_path # Default raspbian tty path is "/dev/ttyUSB"
+        self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num) # Full path for scanning USB
+        self.baudrate = baudrate # Baudrate for STM32 is 115200. If STM32 configuration changed, this should be change,too
         self.timeout = timeout # How long to wait for USB responses.
-        self.KEEP_RUNNING = False
+        self.stm32_run = False
+        self._pin_check = 0
+        self._stm32_client = None
+        self._stm32_thread_client = None
 
 
         # Initial process
-        self.STM32_power = STM32_power()
+        self.stm32_power = Stm32Power()
         self.on()
-        if AUTO_DETECT_PORT:
+        if auto_detect_port:
             self.auto_detect_port()
         else:
-            self.ser = serial.Serial(self.USB_PORT_PATH, self.BAUDRATE,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
-        self.ser.write([0xFF,0xFE, 1, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ])
-        
+            self.ser = serial.Serial(self.usb_full_port_path, self.baudrate, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
+        self.ser.write([0xFF, 0xFE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+
 
     def run(self):
+        '''Run full stm32 system'''
         self.init_socket()
         self.main()
         self.end()
         self.end_background_thread()
 
     def init_socket(self):
+        '''Initialize communication with tcn_bridge'''
         try:
             time.sleep(0.2) # Make sure server initialize first
-            logging.info('Successfully connect to STM32 , port : {} \n'.format(self.USB_PORT_PATH))
-            self.STM32_CLIENT = TCN_socket.TCP_client(50006)
-            self.STM32_BACKGROUND_CLIENT = TCN_socket.UDP_client(50007)
+            logging.info('Successfully connect to STM32 , port : {} \n'.format(self.usb_full_port_path))
+            self._stm32_client = tcn_socket.TCP_client(50006)
+            self._stm32_thread_client = tcn_socket.UDP_client(50007)
             logging.info('STM32 communication established\n')
-            self.STM32_CLIENT.send_list(['S','next'])
-            self.KEEP_RUNNING = True
+            self._stm32_client.send_list(['S', 'next'])
+            self.stm32_run = True
         except:
             traceback.print_exc()
             logging.exception("Got error\n")
             self.end()
             self.end_background_thread()
 
-        
 
     def main(self):
+        '''Main function for stm32'''
         self.start_backgound_thread()
-        while self.KEEP_RUNNING:
+        while self.stm32_run:
             try:
-                data_get = self.STM32_CLIENT.recv_list()
+                data_get = self._stm32_client.recv_list()
                 # logging.info('Command in : {} \n'.format(data_get))
                 self.stm32_portocol(data_get)
             except:
                 traceback.print_exc()
                 logging.exception("Got error \n")
-                self.KEEP_RUNNING = False
+                self.stm32_run = False
                 self.end()
                 self.end_background_thread()
-        
+
 
     def end(self):
-        self.STM32_CLIENT.close()
+        ''' Close communication with bridge, turn off the power of stm32'''
+        self._stm32_client.close()
         self.off()
         logging.info('STM32 is off \n')
 
     def end_background_thread(self):
-        self.STM32_BACKGROUND_CLIENT.send_list([self.USB_PORT_PATH,self.KEEP_RUNNING,self.PIN_CHECK])
-        self.STM32_BACKGROUND_CLIENT.close()
-        # sys.exit()        
+        '''Close back ground thread communication with bridge'''
+        self._stm32_thread_client.send_list([self.usb_full_port_path, self.stm32_run, self._pin_check])
+        self._stm32_thread_client.close()
+        # sys.exit()
 
 
     def start_backgound_thread(self):
+        '''The background thread for sending status to bridge'''
         logging.info('Backgound thread started')
-        THREAD = threading.Thread(target = self.send_status , daemon = True)
-        THREAD.start()
+        thread = threading.Thread(target=self.send_status, daemon=True)
+        thread.start()
 
-    
+
     def send_status(self):
-        while self.KEEP_RUNNING:
-            self.STM32_BACKGROUND_CLIENT.send_list([self.USB_PORT_PATH,self.KEEP_RUNNING,self.PIN_CHECK])
+        '''The background thread for sending status to bridge'''
+        while self.stm32_run:
+            self._stm32_thread_client.send_list([self.usb_full_port_path, self.stm32_run, self._pin_check])
             time.sleep(0.5)
 
 
@@ -114,24 +128,25 @@ class STM32_command(object):
 
         try:
             while find_ser:
-                
+
                 # It is very rare that port ID is more than 10
                 # Thus cut searching when ID is too much. (Time save)
-                if self.USB_PORT_NUM > 10:
+                if self.usb_port_num > 10:
                     # print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
-                    self.USB_PORT_NUM = 0
-                self.USB_PORT_PATH = self.USB_port_path + str(self.USB_PORT_NUM) 
+                    self.usb_port_num = 0
+                self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num)
                 # Setup communication with serial port
                 # If port not found, trigger IOError
                 # If found, test protocol.
-                logging.info('Connect to'+str(self.USB_PORT_PATH))
-                self.ser = serial.Serial(self.USB_PORT_PATH, self.BAUDRATE,serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
+                logging.info('Connect to' + str(self.usb_full_port_path))
+                self.ser = serial.Serial(self.usb_full_port_path, self.baudrate, serial.EIGHTBITS,\
+                     serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
                 logging.info("Number of bytes in input buffer {}".format(self.ser.in_waiting))
                 data = bytearray(self.ser.read(12))
                 logging.info('USB port return : {}'.format(data))
                 # Test protocol
-                # Start byte of serial output of STM32 is 0xff, 0xfe,....... 
-                if data[0] == 255 and data[1] == 254 : 
+                # Start byte of serial output of STM32 is 0xff, 0xfe,.......
+                if data[0] == 255 and data[1] == 254:
                     find_ser = False
                     print("Successfully connect to STM32 controller")
 
@@ -139,8 +154,8 @@ class STM32_command(object):
                     # Scan next port in next loop
                     
                     logging.debug("Number of bytes in input buffer {}".format(self.ser.in_waiting))
-                    self.USB_PORT_NUM = self.USB_PORT_NUM + 1
-                    # self.USB_PORT_PATH = self.USB_port_path + str(self.USB_PORT_NUM) 
+                    self.usb_port_num = self.usb_port_num + 1
+                    # self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num) 
                     # self.ser.close()
                     self.ser.reset_input_buffer()
                     self.ser.close()
@@ -148,86 +163,87 @@ class STM32_command(object):
         except IOError:
             # If not found, scan next port and reload this function
             # print('port not found :'+ self.USB_port_PATH)
-            self.USB_PORT_NUM = self.USB_PORT_NUM + 1
-            # self.USB_PORT_PATH = self.USB_port_path + str(self.USB_PORT_NUM)
+            self.usb_port_num = self.usb_port_num + 1
+            # self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num)
             self.auto_detect_port()
         
         except IndexError:
             # If time out, it may happens that missing array index
-            print('IndexError : data missing , scanning next port')
-            self.USB_PORT_NUM = self.USB_PORT_NUM + 1
-            # self.USB_PORT_PATH = self.USB_port_path + str(self.USB_PORT_NUM)
+            print('IndexError : data missing, scanning next port')
+            self.usb_port_num = self.usb_port_num + 1
+            # self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num)
             self.auto_detect_port()
 
-    def move(self, car = [0,0,0]):
+    def move(self, car=[0, 0, 0]):
         ''' move car ,car = [x ,y ,z, mode ] , mode = 0 position mode ; mode = 1 velocity mode '''
         car = self.limit_maximum_value(car)
         dir_byte = self.reverse_or_not(car)
         coords = self.change_to_hex(car)
-        self.ser.write([0xFF,0xFE, 1, coords[0] , coords[1] , coords[2] , coords[3] , coords[4] , coords[5] , dir_byte , coords[6] , coords[7] ])
+        self.ser.write([0xFF, 0xFE, 1, coords[0], coords[1], coords[2], coords[3], coords[4],\
+             coords[5], dir_byte, coords[6], coords[7]])
 
     def stop(self):
         '''stop motor'''
-        self.ser.write([0xFF,0xFE, 1, 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 , 0 ])
+        self.ser.write([0xFF, 0xFE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
     def off(self):
         '''just turn off the power of STM32 '''
         print("STM32 power off, please wait 0.5 second")
-        self.PIN_CHECK = self.STM32_power.off()
+        self._pin_check = self.stm32_power.off()
 
 
     def on(self):
         '''just turn on the power of STM32 '''
         print('Turnning on STM32, please wait 2 second')
-        self.PIN_CHECK = self.STM32_power.on()
+        self._pin_check = self.stm32_power.on()
 
 
 ################################################################################
 ################################################################################
 ################################################################################
 
-    def stm32_portocol(self,data_get):
+    def stm32_portocol(self, data_get):
+        ''' For interpret message from bridge'''
         if data_get[0] == 'S':
             if data_get[1] == 'exit':
-                self.KEEP_RUNNING = False
+                self.stm32_run = False
                 logging.info(" 'exit' command received, start terminating program\n")
-            elif data_get[1] == 'xbox_move':            
+            elif data_get[1] == 'xbox_move':
                 self.move(data_get[2])
-                self.STM32_CLIENT.send_list(['S','next'])
-            elif data_get[1] == 'move':            
+                self._stm32_client.send_list(['S', 'next'])
+            elif data_get[1] == 'move':
                 self.move(data_get[2])
-                self.STM32_CLIENT.send_list(['S','next'])
-                logging.info(" 'move' command received, movie with "+str(data_get[2])+'\n')
+                self._stm32_client.send_list(['S', 'next'])
+                logging.info(" 'move' command received, movie with " + str(data_get[2]) + '\n')
             elif data_get[1] == 'stop':
-                self.move([0,0,0])
-                logging.info(" 'stop' command received, movie with "+str([0,0,0])+'\n')
+                self.move([0, 0, 0])
+                logging.info(" 'stop' command received, movie with " + str([0, 0, 0]) + '\n')
             elif data_get[1] == 'power_off':
                 self.off()
                 logging.info(" '{}' command received, power off stm32")
             elif data_get[1] == 'power_on':
                 self.on()
                 logging.info(" '{}' command received, power on stm32")
-        
+
         else:
-            print(str(data_get)+" received by STM32. Wrong potorcol ! ")
-            logging.info(str(data_get)+" received by STM32. Wrong potorcol, please check TCN_bridge.py \n")
+            print(str(data_get) + " received by STM32. Wrong potorcol ! ")
+            logging.info(str(data_get) + " received by STM32. Wrong potorcol, please check TCN_bridge.py \n")
 
 
 
-    def change_to_hex(self,car):
+    def change_to_hex(self, car):
         ''' Change the value of x, y, z into hex to satisfy the protocol of STM32 controller '''
-        xhh = int(abs(car[0])/65536)
-        xh = int((abs(car[0])%65536)/256)
-        xl = int((abs(car[0])%65536)%256)
-        yhh = int(abs(car[1])/65536)
-        yh = int((abs(car[1])%65536)/256)
-        yl = int((abs(car[1])%65536)%256)
-        zh = int(abs(car[2])/256)
-        zl = (abs(car[2])%256)
+        x_high_high_byte = int(abs(car[0]) / 65536)
+        x_high_byte = int((abs(car[0]) % 65536) / 256)
+        x_low_byte = int((abs(car[0]) % 65536) % 256)
+        y_high_high_byte = int(abs(car[1]) / 65536)
+        y_high_byte = int((abs(car[1]) % 65536) / 256)
+        y_low_byte = int((abs(car[1]) % 65536) % 256)
+        z_high_byte = int(abs(car[2]) / 256)
+        z_low_byte = (abs(car[2]) % 256)
+        return x_high_byte, x_low_byte, y_high_byte, y_low_byte, z_high_byte, z_low_byte, x_high_high_byte, y_high_high_byte
 
-        return xh,xl,yh,yl,zh,zl,xhh,yhh
-
-    def limit_maximum_value(self,car): 
+    def limit_maximum_value(self, car): 
         ''' This function limit the value of x,y,z '''
         if car[0] >= 16777215:
             car[0] = 16777215
@@ -245,7 +261,7 @@ class STM32_command(object):
             car[2] = -16777215
         return car
 
-    def reverse_or_not(self,car):
+    def reverse_or_not(self, car):
         ''' This generate direction byte for STM32 depends on the direction of x,y,z'''
 
         #Direction X
@@ -263,7 +279,7 @@ class STM32_command(object):
             zrev = 1
         if car[2] >= 0:
             zrev = 0
-        direction_byte = int('00000{}{}{}'.format(xrev,yrev,zrev))
+        direction_byte = int('00000{}{}{}'.format(xrev, yrev, zrev))
         return direction_byte
 
 
@@ -275,52 +291,54 @@ class STM32_command(object):
 #       Test Program
 ###############################
 
-class STM32_Test_Communication:
+class Stm32TestCommunication:
+    ''' This class is used for testing Stm32Command '''
     def __init__(self):
         try:
-            self.MAIN_FLAG = False
-            self.USB_PORT_PATH = 0
-            self.STM32_PROGRAM_RUN = 0
-            self.STM32_POWER = 0
+            self.main_flag = False
+            self.usb_full_port_path = 0
+            self.stm32_program_run = 0
+            self.stm32_power = 0
 
-            import TCN_xbox
+            import tcn_xbox
             import os
             if os.getuid() != 0:
                 print('please Run with sudo\n\n')
                 sys.exit(0)
-            self.xbox = TCN_xbox.Xbox_controller()
-            self.STM32_SERVER = TCN_socket.TCP_server(50006)
-            self.STM32_BACKGROUND_SERVER = TCN_socket.UDP_server(50007)
-            stm32_data = self.STM32_SERVER.recv_list()
+            self.xbox = tcn_xbox.XboxController()
+            self._stm32_server = tcn_socket.TCP_server(50006)
+            self._stm32_thread_server = tcn_socket.UDP_server(50007)
+            stm32_data = self._stm32_server.recv_list()
             self.bridge_potorcol(stm32_data)
-            self.MAIN_FLAG = True
+            self.main_flag = True
             self.main()
         except:
             time.sleep(0.3)
-            self.STM32_SERVER.close()
+            self._stm32_server.close()
             traceback.print_exc()
             print('Bridge initializing fail at stm32_init()')
 
 
     def main(self):
+        '''Main for testing'''
         self.bridge_background_thread()
-        while self.MAIN_FLAG:
+        while self.main_flag:
             try:
                 command = input("command or press 'h' for help : ")
                 if command == 'exit':
-                    self.STM32_SERVER.send_list(['S','exit'])
+                    self._stm32_server.send_list(['S', 'exit'])
                     print('All server will be close in 3 second')
-                    self.MAIN_FLAG = False
+                    self.main_flag = False
                     time.sleep(3)
-                    self.STM32_SERVER.close()
+                    self._stm32_server.close()
                 elif command == 'pf':
-                    if self.STM32_POWER == 1:
-                        self.STM32_SERVER.send_list(['S','power_off'])
+                    if self.stm32_power == 1:
+                        self._stm32_server.send_list(['S', 'power_off'])
                     else:
                         print('STM32 already power off')
                 elif command == 'po':
-                    if self.STM32_POWER == 0:
-                        self.STM32_SERVER.send_list(['S','power_on'])
+                    if self.stm32_power == 0:
+                        self._stm32_server.send_list(['S', 'power_on'])
                     else:
                         print('STM32 already power on')
 
@@ -328,30 +346,30 @@ class STM32_Test_Communication:
                 elif command == 'mwx':
                     while not self.xbox.joy.Back():
                         move_command = self.xbox.xbox_control()
-                        self.STM32_SERVER.send_list(['S','xbox_move',move_command])
-                        receive = self.STM32_SERVER.recv_list()
+                        self._stm32_server.send_list(['S', 'xbox_move', move_command])
+                        receive = self._stm32_server.recv_list()
                         self.bridge_potorcol(receive)
                 elif command == 'cm':
-                    x = int(input('velocity x '))
-                    y = int(input('velocity y '))
-                    z = int(input('velocity y '))
-                    if x == None:
-                        x = 0   
-                    if y == None:
-                        y = 0 
-                    if z == None:
-                        z = 0 
-                    self.STM32_SERVER.send_list(['S','move',[x,y,z]])
-                    receive = self.STM32_SERVER.recv_list()
+                    velocity_x = int(input('velocity x '))
+                    velocity_y = int(input('velocity y '))
+                    velocity_z = int(input('velocity y '))
+                    if velocity_x is None:
+                        velocity_x = 0
+                    if velocity_y is None:
+                        velocity_y = 0
+                    if velocity_z is None:
+                        velocity_z = 0
+                    self._stm32_server.send_list(['S', 'move', [velocity_x, velocity_y, velocity_z]])
+                    receive = self._stm32_server.recv_list()
                     self.bridge_potorcol(receive)
 
                 elif command == 'stop':
-                    self.STM32_SERVER.send_list(['S','stop'])
+                    self._stm32_server.send_list(['S', 'stop'])
 
                 elif command == 'status':
-                    print('stm32 power : {} '.format(self.STM32_POWER))
-                    print('stm32 USB : {}'.format(self.USB_PORT_PATH))
-                    print('stm32 run : {} '.format(self.STM32_PROGRAM_RUN))
+                    print('stm32 power : {} '.format(self.stm32_power))
+                    print('stm32 USB : {}'.format(self.usb_full_port_path))
+                    print('stm32 run : {} '.format(self.stm32_program_run))
                 elif command == 'h':
                     print('exit   : quit all')
                     print('status : get stm32 info')
@@ -362,105 +380,38 @@ class STM32_Test_Communication:
                 else:
                     print('{} received . Wrong potorcol  !'.format(command))
             except:
-                self.STM32_SERVER.send_list(['S','exit'])
+                self._stm32_server.send_list(['S', 'exit'])
                 self.xbox.close()
                 time.sleep(0.3)
-                self.STM32_SERVER.close()
-                self.MAIN_FLAG = False
+                self._stm32_server.close()
+                self.main_flag = False
                 traceback.print_exc()
 
 
     def bridge_background_thread(self):
-        THREAD = threading.Thread(target = self.get_status , daemon = True)
-        THREAD.start()
+        '''back ground thread'''
+        thread = threading.Thread(target=self.get_status, daemon=True)
+        thread.start()
 
 
     def get_status(self):
-        # print('thread run')
-        while self.MAIN_FLAG:
-            STM32_STATUS = self.STM32_BACKGROUND_SERVER.recv_list(8192)
-            if STM32_STATUS != None:
-                self.USB_PORT_PATH = STM32_STATUS[0]
-                self.STM32_PROGRAM_RUN = STM32_STATUS[1]
-                self.STM32_POWER = STM32_STATUS[2]
+        ''' Get status from stm32'''
+        while self.main_flag:
+            stm32_status = self._stm32_thread_server.recv_list(8192)
+            if stm32_status is not None:
+                self.usb_full_port_path = stm32_status[0]
+                self.stm32_program_run = stm32_status[1]
+                self.stm32_power = stm32_status[2]
             time.sleep(0.5)
 
-    def bridge_potorcol(self,receive_data):
+    def bridge_potorcol(self, receive_data):
+        ''' Interpret message from stm32'''
         if receive_data[0] == 'S':
             if receive_data[1] == 'next':
                 pass
 
 
-
-# def init():
-#     global stm32,stm32_client,KEEP_RUNNING
-#     try:
-#         logging.basicConfig(filename='STM32_main.log',filemode = 'w',level =logging.INFO)
-#         stm32 = STM32_command()
-#         logging.info('Successfully connect to STM32 , port : {} \n'.format(stm32.USB_port_PATH))
-#         stm32_client = TCN_socket.TCP_client(50003)
-#         logging.info('STM32 communication established\n')
-#         stm32_client.send_list(['S','next'])
-#         KEEP_RUNNING = True
-#     except:
-#         traceback.print_exc()
-#         logging.exception("Got error\n")
-#         stm32_client.close()
-
-
-
-#     '''Portocol function'''
-
-# def stm32_portocol(data_get):
-#     global stm32,stm32_client,KEEP_RUNNING
-#     if data_get[0] == 'S':
-#         if data_get[1] == 'exit':
-#             KEEP_RUNNING = False
-#             logging.info(" 'exit' command received, start terminating program\n")
-#         elif data_get[1] == 'move':            
-#             stm32.move(data_get[2])
-#             stm32_client.send_list(['S','next'])
-#             logging.info(" 'move' command received, movie with "+str(data_get[2])+'\n')
-#         elif data_get[1] == 'stop':
-#             stm32.move([0,0,0])
-#             logging.info(" 'stop' command received, movie with "+str([0,0,0])+'\n')
-    
-#     else:
-#         print(str(data_get)+" received by STM32. Wrong potorcol ! ")
-#         logging.info(str(data_get)+" received by STM32. Wrong potorcol, please check TCN_bridge.py \n")
-
-
-
-#     '''Running section '''
-
-# def main():
-#     global stm32,stm32_client,KEEP_RUNNING
-#     while KEEP_RUNNING:
-#         try:
-#             data_get = stm32_client.recv_list()
-#             logging.info('Command in : {} \n'.format(data_get))
-#             stm32_portocol(data_get)
-
-
-#         except:
-#             traceback.print_exc()
-#             logging.exception("Got error \n")
-#             stm32_client.close()
-#             KEEP_RUNNING = False
-
-
-
-#     '''Ending section '''
-
-# def end():
-#     stm32_client.close()
-#     stm32.off()
-#     logging.info('STM32 is off \n')
-#     sys.exit(0)
-
 if __name__ == "__main__":
-    # init()
-    # main()
-    # end()
-    stm32 = STM32_command()
-    stm32.run()
+
+    stm = Stm32Command()
+    stm.run()

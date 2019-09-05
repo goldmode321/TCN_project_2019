@@ -1,2 +1,2 @@
-import TCN_vision
-TCN_vision.Vision_Test()
+import tcn_vision
+tcn_vision.VisionTest()
