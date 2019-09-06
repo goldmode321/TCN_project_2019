@@ -108,6 +108,10 @@ class Commander():
                         self._commander_tcp_server.send_list(['C', 'al'])
                     elif command == 'cc':
                         self._commander_tcp_server.send_list(['C', 'cc'])
+                    elif command == 'vrs':
+                        self._commander_tcp_server.send_list(['C', 'vrs'])
+                        print('Vision is reseting , please wait 5 second')
+                        time.sleep(5)
                     elif command == 'gp':
                         if len(command_list) > 1:
                             self._commander_tcp_server.send_list(['C', 'gp', command_list[1]])
@@ -130,9 +134,6 @@ class Commander():
                             self._commander_tcp_server.recv_list()
                         else:
                             print('Please specify mapid')
-                    elif command == 'vrs':
-                        self._commander_tcp_server.send_list(['C', 'vrs'])
-                        print('Vision is reseting , please wait 5 second')
 
 
                     ############### STM32 & XBOX ##############
