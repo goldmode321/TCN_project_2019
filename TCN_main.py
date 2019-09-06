@@ -119,7 +119,7 @@ class Commander():
                             self._commander_tcp_server.recv_list()
                         else:
                             self._commander_tcp_server.send_list(['C', 'gp'])
-                    elif command in('bm', 'um', 'kbm'):
+                    elif command in ['bm', 'um', 'kbm']:
                         if len(command_list) > 1:
                             self._commander_tcp_server.send_list(['C', command, command_list[1]])
                             try:
@@ -133,6 +133,8 @@ class Commander():
                     elif command == 'vrs':
                         self._commander_tcp_server.send_list(['C', 'vrs'])
                         print('Vision is reseting , please wait 5 second')
+
+
                     ############### STM32 & XBOX ##############
                     elif command == 'xs':
                         self._commander_tcp_server.send_list(['C', 'xs'])
