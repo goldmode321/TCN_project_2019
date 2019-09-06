@@ -159,14 +159,34 @@ except:
 # time.sleep(0.5)
 # server.close()
 
-import TCN_socket
-server = TCN_socket.UDP_server(55555)
-RUN = True
-while RUN:
-    try:
-        cmd = input('321  : ')
-        if cmd == 'e':
-            break
-    except:
-        break
-
+import time
+def ppp():
+    pass
+start_time = time.time()
+dic = {'1':'123', '2':321, 'a':321, 'b':321, '2c':321, '2d':321, '2q':321, '3':ppp}
+b = '3'
+for i in range(100000):
+    dic[b]()
+end_time = time.time()
+print('First : {}'.format(end_time - start_time))
+start_time = time.time()
+a = 3
+for i in range(100000):
+    if a == 1:
+        print('123')
+    elif a == 2:
+        print(321)
+    elif a =='b':
+        pass
+    elif a == '2c':
+        pass
+    elif a == '2d':
+        pass
+    elif a =='321':
+        pass
+    elif a ==123:
+        pass
+    elif a == 3:
+        pass
+end_time = time.time()
+print('Second : {}'.format(end_time - start_time))
