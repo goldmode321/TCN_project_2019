@@ -33,9 +33,9 @@ class Vision:
         self.vision_thread_client = None
 
         if auto_start:
-            self.run()
+            self.autorun()
 
-    def run(self):
+    def autorun(self):
         ''' Auto start step'''
         self.init()
         self.start_background_thread()
@@ -55,7 +55,6 @@ class Vision:
                 logging.info('Connection to Vision module establiished , Vision module status : {}\n'.format(self.vision.alive()))
                 self.vision_client.send_list(['V', 'status', 'Alive'])
                 self.vision_client_run = True
-                self.vision_thread_client_run = True
             else:
                 logging.info('Vision module is not Alive\n')
                 raise KeyboardInterrupt
@@ -83,26 +82,31 @@ class Vision:
     def start_background_thread(self):
         '''Start sending data thread'''
         thread = threading.Thread(target=self.send_vision_status, daemon=True)
+        self.vision_thread_client_run = True
         thread.start()
         logging.info('Thread running')
 
     def send_vision_status(self):
         '''Send vision data to bridge'''
         while self.vision_thread_client_run:
-            if self.reset_flag:
-                time.sleep(4.8)
-                self.reset_flag = False
-            else:
-                status = self.vision.get_status()
-                pose = self.vision.get_pose()
-                self.vision_status = status[0]
-                self.vision_x = pose[3]
-                self.vision_y = pose[4]
-                self.vision_theta = pose[5]
-                self.vision_thread_client.send_list([self.vision_x, self.vision_y, \
-                    self.vision_theta, self.vision_status, self.vision_client_run, \
-                        self.vision_thread_client_run])
-            time.sleep(0.15)
+            try:
+                if self.reset_flag:
+                    # time.sleep(7)
+                    self.reset_flag = False
+                else:
+                    status = self.vision.get_status()
+                    pose = self.vision.get_pose()
+                    self.vision_status = status[0]
+                    self.vision_x = pose[3]
+                    self.vision_y = pose[4]
+                    self.vision_theta = pose[5]
+                    self.vision_thread_client.send_list([self.vision_x, self.vision_y, \
+                        self.vision_theta, self.vision_status, self.vision_client_run, \
+                            self.vision_thread_client_run])
+                time.sleep(0.15)
+            except:
+                logging.exception('Vision thread got error : ')
+
 
 
     def vision_portocol(self, vision_receive):
@@ -128,9 +132,12 @@ class Vision:
                 print('save_db(), response: {}'.format(save_resp))
             elif vision_receive[1] == 'rs':
                 self.reset_flag = True
+                self.vision_thread_client_run = False
                 time.sleep(0.2)
                 reset_resp = self.vision.reset()
                 print('reset(), response: {}'.format(reset_resp))
+                time.sleep(6.8)
+                self.start_background_thread()
             elif vision_receive[1] == 'bm': # Build map
                 if vision_receive[2] is not None:
                     start_resp = self.vision.set_start(1, [vision_receive[2]])

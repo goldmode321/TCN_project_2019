@@ -159,34 +159,63 @@ except:
 # time.sleep(0.5)
 # server.close()
 
+# import time
+# def ppp():
+#     pass
+# start_time = time.time()
+# dic = {'1':'123', '2':321, 'a':321, 'b':321, '2c':321, '2d':321, '2q':321, '3':ppp}
+# b = '3'
+# for i in range(100000):
+#     dic[b]()
+# end_time = time.time()
+# print('First : {}'.format(end_time - start_time))
+# start_time = time.time()
+# a = 3
+# for i in range(100000):
+#     if a == 1:
+#         print('123')
+#     elif a == 2:
+#         print(321)
+#     elif a =='b':
+#         pass
+#     elif a == '2c':
+#         pass
+#     elif a == '2d':
+#         pass
+#     elif a =='321':
+#         pass
+#     elif a ==123:
+#         pass
+#     elif a == 3:
+#         pass
+# end_time = time.time()
+# print('Second : {}'.format(end_time - start_time))
+
 import time
-def ppp():
-    pass
-start_time = time.time()
-dic = {'1':'123', '2':321, 'a':321, 'b':321, '2c':321, '2d':321, '2q':321, '3':ppp}
-b = '3'
-for i in range(100000):
-    dic[b]()
-end_time = time.time()
-print('First : {}'.format(end_time - start_time))
-start_time = time.time()
-a = 3
-for i in range(100000):
-    if a == 1:
-        print('123')
-    elif a == 2:
-        print(321)
-    elif a =='b':
-        pass
-    elif a == '2c':
-        pass
-    elif a == '2d':
-        pass
-    elif a =='321':
-        pass
-    elif a ==123:
-        pass
-    elif a == 3:
-        pass
-end_time = time.time()
-print('Second : {}'.format(end_time - start_time))
+class classB():
+    def __init__(self,a=1, b=10, t = None):
+        self.a = a
+        self.b = b
+        self.t = t
+
+    def dic(self):
+        return {1:self.b1, 2:222, 3:self.a}
+
+    def b1(self):
+        self.t.sleep(3)
+        print('b1')
+
+
+
+class classA(classB):
+    def __init__(self):
+        self.a = 100
+        self.b = 200
+        
+        super().__init__(self.a, self.b, time)
+        self.d = self.dic()
+
+    def a1(self):
+        print('a1')
+
+

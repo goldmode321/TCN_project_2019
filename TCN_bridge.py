@@ -147,7 +147,7 @@ class Bridge:
         '''Initialize vision system and communication '''
         try:
             logging.info("Initialize vision server\n")
-            subprocess.Popen('python3 TCN_vision.py', shell=True, start_new_session=True)
+            subprocess.Popen('python3 tcn_vision.py', shell=True, start_new_session=True)
             self.vision_thread_server = tcn_socket.UDP_server(50003)
             self.vision_server = tcn_socket.TCP_server(50002)
             receive = self.vision_server.recv_list()
@@ -221,7 +221,7 @@ class Bridge:
         '''Initialize Lidar system and communication'''
         try:
             logging.info("Initialize lidar server\n")
-            subprocess.Popen('python3 TCN_rplidar.py', shell=True, start_new_session=True)
+            subprocess.Popen('python3 tcn_rplidar.py', shell=True, start_new_session=True)
             self.lidar_server = tcn_socket.TCP_server(50004)
             self.lidar_thread_server = tcn_socket.UDP_server(50005)
             lidar_data = self.lidar_server.recv_list()
@@ -287,7 +287,7 @@ class Bridge:
         '''Initialize motor controller and communication'''
         try:
             logging.info("Initialize STM32 server\n")
-            subprocess.Popen('python3 TCN_STM32.py', shell=True, start_new_session=True)
+            subprocess.Popen('python3 tcn_stm32.py', shell=True, start_new_session=True)
             self.stm32_server = tcn_socket.TCP_server(50006)
             self.stm32_thread_server = tcn_socket.UDP_server(50007)
             stm32_data = self.stm32_server.recv_list()
@@ -386,7 +386,7 @@ class Bridge:
     def bridge_protocol(self, bridge_receive):
         '''First, get commander command (TCN_main.py)'''
         try:
-            if bridge_receive is not None:
+            if bridge_receive is None:
                 print('Bridge : socket may got problem')
 
             elif bridge_receive[0] == 'C':
@@ -489,8 +489,6 @@ class Bridge:
                     self.vision_server.send_list(['V', 'sv'])
                 elif bridge_receive[1] == 'vrs':
                     self.vision_server.send_list(['V', 'rs'])
-                    print('reset vision , please wait 5 second')
-                    time.sleep(5)
                 elif bridge_receive[1] in ['bm', 'um', 'kbm']:
                     if type(bridge_receive[2]) == int:
                         if bridge_receive[2] >= 0:
