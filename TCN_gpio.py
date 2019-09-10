@@ -1,6 +1,6 @@
 import RPi.GPIO as gpio 
 import time
-import tcn_socket as tcns
+
 
 # The input can be BOARD and BCM , refer to definded pin number 
 gpio.setmode(gpio.BCM) 
@@ -8,8 +8,7 @@ gpio.setmode(gpio.BCM)
 gpio.setwarnings(False) 
 
 
-# Channal for our system to check if everything work well.
-tcns.UDP_client(50001)
+
 
 class Stm32Power(object):
     ''' Class for turn on or off the power of STM32 '''

@@ -6,7 +6,7 @@ import traceback
 import subprocess
 import threading
 import logging
-import tcn_xbox
+import xbox
 import tcn_socket
 
 class Bridge:
@@ -18,6 +18,7 @@ class Bridge:
         # Bridge initial variables
         self.auto_start = auto_start
         self.bridge_run = False
+        self.bridge_receive = []
 
         # XBOX initial variables
         self.xbox_run = False
@@ -38,6 +39,8 @@ class Bridge:
         self.theta = 0
         self.vision_status = 0
         self.vision_data = []
+        self.recorded_vision_coordinate = []
+        self.vision_record_coordinate = False
         self.vision_client_run = False
         self.vision_server_run = False
         self.vision_thread_server_run = False
@@ -68,6 +71,14 @@ class Bridge:
         # Algorithm initial variables
         self.algorithm_run = False
 
+        self.command_dictionary_bridge = {'exit all':self._exit_all, 'exit b':self._exit_b, 'exit l':self._exit_l, \
+            'exit s':self._exit_s, 'exit v':self._exit_v, 'li':self._li, \
+                'gld':self._gld, 'vi':self._vi, 'vs':self._vs, 'gs':self._gs, 'al':self._al, \
+                    'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, 'gp x':self._gp_x, \
+                        'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, \
+                            'kbm':self._kbm, 'xs':self._xs, 'si':self._si, 'mwx':self._mwx, \
+                                'stop':self._stop, 'xi':self._xi, 'next':self._next}
+
         if self.auto_start:
             self.xbox_init()
             self.commander_init()
@@ -81,8 +92,14 @@ class Bridge:
 ############ XBOX initialize #########
     def xbox_init(self):
         '''Connect to XBOX controller'''
-        self.xbox = tcn_xbox.XboxController()
-        self.xbox_on = True
+        try:
+            self.xbox = xbox.Joystick()
+            self.xbox_on = True
+        # self.xbox = tcn_xbox.XboxController()
+        except IOError:
+            print('Xbox connect error, auto retry again ; Please move joystick or press any button')
+            self.xbox_init()
+
 
     def xbox_get_data(self):
         '''Xbox run in back ground'''
@@ -94,14 +111,22 @@ class Bridge:
         '''Get XBOX data'''
         self.xbox_run = True
         while self.xbox_run:
-            move_command = self.xbox.xbox_control()
-            self.xbox_x = move_command[0]
-            self.xbox_y = move_command[1]
-            self.xbox_z = move_command[2]
-            self.xbox_step = move_command[3]
+            self.xbox_control()
             if self.xbox_move_stm32:
                 self.stm32_server.send_list(['S', 'xbox_move', [self.xbox_x, self.xbox_y, self.xbox_z]])
                 self.stm32_server.recv_list()
+            if self.vision_record_coordinate:
+                if self.xbox.X():
+                    self.recorded_vision_coordinate.append([self.vision_x, self.vision_y, self.theta])
+                    print('Way point added : {}'.format([self.vision_x, self.vision_y, self.theta]))
+                if self.xbox.Y():
+                    try:
+                        print('Way point deleted : {}'.\
+                            format(self.recorded_vision_coordinate[len(self.recorded_vision_coordinate) - 1]))
+                        del self.recorded_vision_coordinate[len(self.recorded_vision_coordinate) - 1]
+                    except IndexError:
+                        print('No way point left for delete')
+
             time.sleep(0.01)
 
     def end_xbox(self):
@@ -111,7 +136,22 @@ class Bridge:
         self.xbox_on = False
         self.xbox.close()
 
+    def xbox_control(self):
+        '''which return left stick position and right stick x-direction position'''
+        # Key A means accelerate
+        if int(self.xbox.A()) and self.xbox_step <= 131:
+            self.xbox_step = self.xbox_step + 1
+            print(self.xbox_step)
+            time.sleep(0.05)
+        # Key B means deaccelerate
+        if int(self.xbox.B()) and self.xbox_step > 0:
+            self.xbox_step = self.xbox_step - 1
+            print(self.xbox_step)
+            time.sleep(0.05)
 
+        self.xbox_x = int(self.xbox_step*round(self.xbox.leftX(),2)) 
+        self.xbox_y = int(self.xbox_step*round(self.xbox.leftY(),2))
+        self.xbox_z = int(self.xbox_step*round(self.xbox.rightX(),2))
 
 ############### Commander TCP Client Version ###############
 
@@ -352,11 +392,11 @@ class Bridge:
         self.bridge_run = True
         while self.bridge_run:
             try:
-                bridge_receive = self.commander_server.recv_list()
-                if bridge_receive is not None:
-                    self.bridge_protocol(bridge_receive)
+                self.bridge_receive = self.commander_server.recv_list()
+                if self.bridge_receive is not None:
+                    self.bridge_protocol()
                 else:
-                    print('Bridge received {}'.format(bridge_receive))
+                    print('Bridge received {}'.format(self.bridge_receive))
                     print('Please check commander status !')
                     retry += 1
                     time.sleep(0.5)
@@ -383,147 +423,35 @@ class Bridge:
         self.end_vision_thread_server()
         self.end_commander_server()
 
-    def bridge_protocol(self, bridge_receive):
+
+    def bridge_protocol(self):
         '''First, get commander command (TCN_main.py)'''
         try:
-            if bridge_receive is None:
+            if self.bridge_receive is None:
                 print('Bridge : socket may got problem')
 
-            elif bridge_receive[0] == 'C':
-                if bridge_receive[1] == 'exit':
-                    if bridge_receive[2] == 'all':
-                        self.end_bridge_all()
-                        self.bridge_run = False
-                    elif bridge_receive[2] == 'l':
-                        self.end_lidar_server()
-                        self.end_lidar_thread_server()
-                    elif bridge_receive[2] == 's':
-                        self.end_stm32_server()
-                        self.end_stm32_thread_server()
-                    elif bridge_receive[2] == 'v':
-                        self.end_vision_server()
-                        self.end_vision_thread_server()
-                    elif bridge_receive[2] == 'x':
-                        self.end_xbox()
+            elif self.bridge_receive[0] == 'C':
+                self.command_dictionary_bridge[self.bridge_receive[1]]()
 
-                if bridge_receive[1] == 'next':
-                    pass
-
-
-######################## STM32 & XBOX #################
-                elif bridge_receive[1] == 'xs':
-                    print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}'\
-                        .format(self.xbox_run, self.xbox_move_stm32, self.xbox_x, self.xbox_y, self.xbox_z, self.xbox_step))
-                elif bridge_receive[1] == 'si':
-                    if not self.stm32_server_run:
-                        self.stm32_init()
-                    else:
-                        print('STM32 run already')
-                    self.commander_server.send_list(['C', 'next'])
-                elif bridge_receive[1] == 'xi':
-                    if not self.xbox_on:
-                        self.xbox_init()
-                    else:
-                        print('XBOX run already')
-                    self.commander_server.send_list(['C', 'next'])
-                elif bridge_receive[1] == 'mwx':
-                    self.xbox_move_stm32 = True
-                    self.xbox_get_data()
-                    while self.xbox_move_stm32:
-                        try:
-                            receive = self.commander_udp_server.recv_list()
-                            if receive is not None:
-                                self.xbox_move_stm32 = False
-                            else:
-                                self.xbox_move_stm32 = True
-                            time.sleep(0.1)
-                        except TypeError:
-                            pass
-                        except:
-                            self.xbox_move_stm32 = False
-                    self.xbox_move_stm32 = False
-                    self.commander_server.send_list(['C', 'next'])
-                elif bridge_receive[1] == 'stop':
-                    self.stm32_server.send_list(['S', 'stop'])
-
-######################## LiDAR #################
-                elif bridge_receive[1] == 'li':
-                    if not self.lidar_server_run:
-                        self.lidar_init()
-                    else:
-                        print('LiDAR run already')
-                    self.commander_server.send_list(['C', 'next'])
-                elif bridge_receive[1] == 'gld':
-                    print(self.lidar_data)
-
-
-
-######################## Vision ################
-                elif bridge_receive[1] == 'vi':
-                    if not self.vision_server_run:
-                        self.vision_init()
-                    else:
-                        print('Vision run already')
-                    self.commander_server.send_list(['C', 'next'])
-                elif bridge_receive[1] == 'al':
-                    self.vision_server.send_list(['V', 'al'])
-                elif bridge_receive[1] == 'cc':
-                    self.vision_server.send_list(['V', 'cc'])
-                elif bridge_receive[1] == 'vs':
-                    print('Vision server : {}\nVision thread server : {}\nVision client : {}\nVision thread client : {}'\
-                        .format(self.vision_server_run, self.vision_thread_server_run, self.vision_client_run, self.vision_thread_client_run))
-                elif bridge_receive[1] == 'gp':
-                    try:
-                        if bridge_receive[2] == 'c':
-                            self.bridge_show_vision_data()
-                        elif bridge_receive[2] == 'x':
-                            self.bridge_show_vision_data_xbox()
-                        elif bridge_receive[2] == 'exit':
-                            self.bridge_show_vision_data_run = False
-                            self.xbox_move_stm32 = False
-                    except IndexError:
-                        print('status : {} | x : {} | y : {} | theta : {} '.format(self.vision_status, self.vision_x, self.vision_y, self.theta))
-                elif bridge_receive[1] == 'gs':
-                    self.show_vision_status()
-                elif bridge_receive[1] == 'sv':
-                    self.vision_server.send_list(['V', 'sv'])
-                elif bridge_receive[1] == 'vrs':
-                    self.vision_server.send_list(['V', 'rs'])
-                elif bridge_receive[1] in ['bm', 'um', 'kbm']:
-                    if type(bridge_receive[2]) == int:
-                        if bridge_receive[2] >= 0:
-                            self.vision_server.send_list(['V', bridge_receive[1], int(bridge_receive[2])])
-                            self.bridge_show_vision_data_xbox()
-                        else:
-                            print('mapid must be positive integer')
-                    elif bridge_receive[2] is None:
-                        print('Please specify mapid. Ex : {} 1 '.format(bridge_receive[1]))
-                    elif bridge_receive[2] == 'end':
-                        self.bridge_show_vision_data_run = False
-                        self.xbox_move_stm32 = False
-
-
-
-
-            elif bridge_receive[0] == 'S':
-                if bridge_receive[1] == 'next':
+            elif self.bridge_receive[0] == 'S':
+                if self.bridge_receive[1] == 'next':
                     # self.commander_server.send_list(['C','next'])
                     pass
 
 
-            elif bridge_receive[0] == 'V':
-                if bridge_receive[1] == 'next':
+            elif self.bridge_receive[0] == 'V':
+                if self.bridge_receive[1] == 'next':
                     self.commander_server.send_list(['C', 'next'])
 
 
-            elif bridge_receive[0] == 'L':
-                if bridge_receive[1] == 'next':
+            elif self.bridge_receive[0] == 'L':
+                if self.bridge_receive[1] == 'next':
                     self.commander_server.send_list(['C', 'next'])
 
 
             else:
-                print('{} received . Wrong potorcol  !'.format(bridge_receive))
-                logging.info('{} received . Wrong potorcol  !'.format(bridge_receive))
+                print('{} received . Wrong potorcol  !'.format(self.bridge_receive))
+                logging.info('{} received . Wrong potorcol  !'.format(self.bridge_receive))
 
 
         except:
@@ -531,7 +459,6 @@ class Bridge:
             traceback.print_exc()
             logging.exception('Got error : ')
             print('\n\nForce abort current order')
-
 
 
     def bridge_show_vision_data(self):
@@ -603,9 +530,139 @@ class Bridge:
 
 
 
+############ Command relative function ###########
+    def _exit_all(self):
+        self.end_bridge_all()
+        self.bridge_run = False
+    def _exit_b(self):
+        self.end_bridge_all()
+        self.bridge_run = False
+    def _exit_l(self):
+        self.end_lidar_server()
+        self.end_lidar_thread_server()
+    def _exit_s(self):
+        self.end_stm32_server()
+        self.end_stm32_thread_server()
+    def _exit_v(self):
+        self.end_vision_server()
+        self.end_vision_thread_server()
+    def _exit_x(self):
+        self.end_xbox()
+
+
+    ################ LiDAR ###############
+    def _li(self):
+        if not self.lidar_server_run:
+            self.lidar_init()
+        else:
+            print('LiDAR run already')
+    def _gld(self):
+        print(self.lidar_data)
+
+    ################ Vision #############
+    def _vi(self):
+        if not self.vision_server_run:
+            self.vision_init()
+        else:
+            print('Vision run already')
+        self.commander_server.send_list(['C', 'next'])
+    def _vs(self):
+        print('Vision server : {}\nVision thread server : {}\nVision client : {}\nVision thread client : {}'\
+            .format(self.vision_server_run, self.vision_thread_server_run, self.vision_client_run, self.vision_thread_client_run))
+    def _gs(self):
+        self.show_vision_status()
+    def _sv(self):
+        self.vision_server.send_list(['V', 'sv'])
+    def _al(self):
+        self.vision_server.send_list(['V', 'al'])
+    def _cc(self):
+        self.vision_server.send_list(['V', 'cc'])
+    def _vrs(self):
+        self.vision_server.send_list(['V', 'rs'])
+    def _gp_c(self):
+        self.bridge_show_vision_data()
+    def _gp_x(self):
+        self.bridge_show_vision_data_xbox()
+    def _gp_exit(self):
+        self.bridge_show_vision_data_run = False
+        self.xbox_move_stm32 = False
+    def _gp(self):
+        print('status : {} | x : {} | y : {} | theta : {} '.format(self.vision_status, self.vision_x, self.vision_y, self.theta))
+    def _bm(self):
+        if type(self.bridge_receive[2]) == int:
+            if self.bridge_receive[2] >= 0:
+                self.vision_server.send_list(['V', 'bm', int(self.bridge_receive[2])])
+                self.bridge_show_vision_data_xbox()
+            else:
+                print('mapid must be positive integer')
+        elif self.bridge_receive[2] is None:
+            print('Please specify mapid. Ex : bm 1 ')
+        elif self.bridge_receive[2] == 'end':
+            self.bridge_show_vision_data_run = False
+            self.xbox_move_stm32 = False
+    def _um(self):
+        if type(self.bridge_receive[2]) == int:
+            if self.bridge_receive[2] >= 0:
+                self.vision_server.send_list(['V', 'um', int(self.bridge_receive[2])])
+                self.bridge_show_vision_data_xbox()
+            else:
+                print('mapid must be positive integer')
+        elif self.bridge_receive[2] is None:
+            print('Please specify mapid. Ex : um 1 ')
+        elif self.bridge_receive[2] == 'end':
+            self.bridge_show_vision_data_run = False
+            self.xbox_move_stm32 = False
+    def _kbm(self):
+        if type(self.bridge_receive[2]) == int:
+            if self.bridge_receive[2] >= 0:
+                self.vision_server.send_list(['V', 'kbm', int(self.bridge_receive[2])])
+                self.bridge_show_vision_data_xbox()
+            else:
+                print('mapid must be positive integer')
+        elif self.bridge_receive[2] is None:
+            print('Please specify mapid. Ex : kbm 1 ')
+        elif self.bridge_receive[2] == 'end':
+            self.bridge_show_vision_data_run = False
+            self.xbox_move_stm32 = False
+
+    ############ XBOX and STM32 #################
+    def _xs(self):
+        print('XBOX run : {}\nXBOX move stm32 : {}\nXBOX X : {}\nXBOX Y : {}\nXBOX Z : {}\nXBOX STEP : {}'\
+            .format(self.xbox_run, self.xbox_move_stm32, self.xbox_x, self.xbox_y, self.xbox_z, self.xbox_step))
+    def _si(self):
+        if not self.stm32_server_run:
+            self.stm32_init()
+        else:
+            print('STM32 run already')
+        self.commander_server.send_list(['C', 'next'])
+    def _mwx(self):
+        self.xbox_move_stm32 = True
+        self.xbox_get_data()
+        while self.xbox_move_stm32:
+            try:
+                receive = self.commander_udp_server.recv_list()
+                if receive is not None:
+                    self.xbox_move_stm32 = False
+                else:
+                    self.xbox_move_stm32 = True
+                time.sleep(0.1)
+            except TypeError:
+                pass
+            except:
+                self.xbox_move_stm32 = False
+        self.xbox_move_stm32 = False
+        self.commander_server.send_list(['C', 'next'])
+    def _stop(self):
+        self.stm32_server.send_list(['S', 'stop'])
+    def _xi(self):
+        if not self.xbox_on:
+            self.xbox_init()
+        else:
+            print('XBOX run already')
+        self.commander_server.send_list(['C', 'next'])
+    def _next(self):
+        pass
+
 
 if __name__ == "__main__":
-    # bridge_init()
-    # bridge_main()
-    # end_bridge()
     Bridge()

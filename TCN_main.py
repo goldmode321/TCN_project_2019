@@ -22,7 +22,7 @@ class CommandDictionary:
         self.command_dictionary = {'cs':self._cs, 'bi':self.bridge_init, 'h':self._help}
         self.command_dictionary_bridge_require = {'exit all':self._exit_all, 'exit b':self._exit_b, 'exit l':self._exit_l, \
             'exit s':self._exit_s, 'exit v':self._exit_v, 'exit':self._exit, 'li':self._li, \
-                'gld':self._gld, 'vi':self._vi, 'vs':self._vs, 'gs':self._gs, 'al':self._al, \
+                'gld':self._gld, 'vi':self._vi, 'vs':self._vs, 'sv':self._sv, 'gs':self._gs, 'al':self._al, \
                     'cc':self._cc, 'vrs':self._vrs, 'gp c':self._gp_c, 'gp x':self._gp_x, \
                         'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, \
                             'kbm':self._kbm, 'xs':self._xs, 'si':self._si, 'mwx':self._mwx, \
@@ -40,7 +40,7 @@ class CommandDictionary:
     def _exit_all(self):
         self.commander_run = False
     def _exit_b(self):
-        self._commander_tcp_server.send_list(['C', 'exit', 'all'])
+        self._commander_tcp_server.send_list(['C', 'exit all'])
         print('Commander server will be close in 5 second')
         time.sleep(5)
         self._commander_tcp_server.close()
@@ -48,13 +48,13 @@ class CommandDictionary:
         self._commander_tcp_server = None
         self.commander_tcp_server_run = False
     def _exit_l(self):
-        self._commander_tcp_server.send_list(['C', 'exit', 'l'])
+        self._commander_tcp_server.send_list(['C', 'exit l'])
     def _exit_s(self):
-        self._commander_tcp_server.send_list(['C', 'exit', 's'])
+        self._commander_tcp_server.send_list(['C', 'exit s'])
     def _exit_v(self):
-        self._commander_tcp_server.send_list(['C', 'exit', 'v'])
+        self._commander_tcp_server.send_list(['C', 'exit v'])
     def _exit_x(self):
-        self._commander_tcp_server.send_list(['C', 'exit', 'x'])
+        self._commander_tcp_server.send_list(['C', 'exit x'])
     def _exit(self):
         print("Please specify which exit command to use Ex:'exit all'")
 
@@ -77,12 +77,14 @@ class CommandDictionary:
         self._commander_tcp_server.send_list(['C', 'al'])
     def _cc(self):
         self._commander_tcp_server.send_list(['C', 'cc'])
+    def _sv(self):
+        self._commander_tcp_server.send_list(['C', 'sv'])
     def _vrs(self):
         self._commander_tcp_server.send_list(['C', 'vrs'])
         print('Vision is reseting , please wait 7 second')
         time.sleep(7)
     def _gp_c(self):
-        self._commander_tcp_server.send_list(['C', 'gp', 'c'])
+        self._commander_tcp_server.send_list(['C', 'gp c'])
         try:
             input("Use Ctrl+C or enter any key to end current process : ")
             self._commander_udp_client.send_list(['end'])
@@ -90,7 +92,7 @@ class CommandDictionary:
             self._commander_udp_client.send_list(['end'])
         self._commander_tcp_server.recv_list()
     def _gp_x(self):
-        self._commander_tcp_server.send_list(['C', 'gp', 'x'])
+        self._commander_tcp_server.send_list(['C', 'gp x'])
         try:
             input("Use Ctrl+C or enter any key to end current process : ")
             self._commander_udp_client.send_list(['end'])
@@ -98,7 +100,7 @@ class CommandDictionary:
             self._commander_udp_client.send_list(['end'])
         self._commander_tcp_server.recv_list()
     def _gp_exit(self):
-        self._commander_tcp_server.send_list(['C', 'gp', 'exit'])
+        self._commander_tcp_server.send_list(['C', 'gp exit'])
     def _gp(self):
         self._commander_tcp_server.send_list(['C', 'gp'])
     def _bm(self):
@@ -113,6 +115,8 @@ class CommandDictionary:
             self._commander_tcp_server.recv_list()
         except ValueError:
             print('Please specify MapID in integer')
+        except KeyboardInterrupt:
+            print('Abort')
     def _um(self):
         try:
             mapid = int(input('MapID : '))
@@ -125,6 +129,8 @@ class CommandDictionary:
             self._commander_tcp_server.recv_list()
         except ValueError:
             print('Please specify MapID in integer')
+        except KeyboardInterrupt:
+            print('Abort')
     def _kbm(self):
         try:
             mapid = int(input('MapID : '))
@@ -137,6 +143,8 @@ class CommandDictionary:
             self._commander_tcp_server.recv_list()
         except ValueError:
             print('Please specify MapID in integer')
+        except KeyboardInterrupt:
+            print('Abort')
 
     ############ XBOX and STM32 #################
     def _xs(self):
@@ -274,138 +282,6 @@ class Commander(CommandDictionary):
                 print('\nError From Commander\n')
                 traceback.print_exc()
 
-
-
-# @@@@@@@@@@@ Version 1 @@@@@@@@@@@
-    # def commander_main(self):
-    #     '''Main function for commander '''
-    #     logging.info('Commander main start')
-    #     self.commander_run = True
-    #     while self.commander_run:
-    #         try:
-    #             command = input("\nPlease enter command , enter 'h' for _help : ")
-    #             logging.info('Command : %s', command)
-    #             command_list = command.lower().split() #splits the input string on spaces
-    #             command = command_list[0]
-
-    #             if command == 'cs':
-    #                 print('Commander run : {} \nCommander server run : {}'.\
-    #                     format(self.commander_run, self.commander_tcp_server_run))
-    #             elif command == 'bi':
-    #                 self.bridge_init()
-    #             elif command == 'h':
-    #                 self._help()
-
-    #             elif command is not None and not self.commander_tcp_server_run:
-    #                 print("Commander server is not working, please use 'bi' \
-    #                     command to initialize bridge first ")
-
-    #             elif command is not None and self.commander_tcp_server_run:
-    #                 if command == 'exit':
-    #                     if len(command_list) > 1:
-    #                         if command_list[1] == 'all':
-    #                             self.commander_run = False
-    #                         elif command_list[1] == 'b':
-    #                             self._commander_tcp_server.send_list(['C', 'exit', 'all'])
-    #                             print('Commander server will be close in 5 second')
-    #                             time.sleep(5)
-    #                             self._commander_tcp_server.close()
-    #                             self._commander_udp_client.close()
-    #                             self._commander_tcp_server = None
-    #                             self._commander_udp_client = None
-    #                             self.commander_tcp_server_run = False
-    #                         elif command_list[1] == 'l':
-    #                             self._commander_tcp_server.send_list(['C', 'exit', 'l'])
-    #                         elif command_list[1] == 's':
-    #                             self._commander_tcp_server.send_list(['C', 'exit', 's'])
-    #                         elif command_list[1] == 'v':
-    #                             self._commander_tcp_server.send_list(['C', 'exit', 'v'])
-    #                         elif command_list[1] == 'x':
-    #                             self._commander_tcp_server.send_list(['C', 'exit', 'x'])
-    #                         else:
-    #                             print("Please specify which exit command to use Ex:'exit all'")
-
-
-    #                 ################ LiDAR ###############
-    #                 elif command == 'li':
-    #                     self._commander_tcp_server.send_list(['C', 'li'])
-    #                     self._commander_tcp_server.recv_list()
-    #                 elif command == 'gld':
-    #                     self._commander_tcp_server.send_list(['C', 'gld'])
-
-
-    #                 ################ Vision #############
-    #                 elif command == 'vi':
-    #                     self._commander_tcp_server.send_list(['C', 'vi'])
-    #                     self._commander_tcp_server.recv_list()
-    #                 elif command == 'vs':
-    #                     self._commander_tcp_server.send_list(['C', 'vs'])
-    #                 elif command == 'gs':
-    #                     self._commander_tcp_server.send_list(['C', 'gs'])
-    #                 elif command == 'al':
-    #                     self._commander_tcp_server.send_list(['C', 'al'])
-    #                 elif command == 'cc':
-    #                     self._commander_tcp_server.send_list(['C', 'cc'])
-    #                 elif command == 'vrs':
-    #                     self._commander_tcp_server.send_list(['C', 'vrs'])
-    #                     print('Vision is reseting , please wait 5 second')
-    #                     time.sleep(5)
-    #                 elif command == 'gp':
-    #                     if len(command_list) > 1:
-    #                         self._commander_tcp_server.send_list(['C', 'gp', command_list[1]])
-    #                         try:
-    #                             input("Use Ctrl+C or enter any key to end current process : ")
-    #                             self._commander_udp_client.send_list(['end'])
-    #                         except KeyboardInterrupt:
-    #                             self._commander_udp_client.send_list(['end'])
-    #                         self._commander_tcp_server.recv_list()
-    #                     else:
-    #                         self._commander_tcp_server.send_list(['C', 'gp'])
-    #                 elif command in ['bm', 'um', 'kbm']:
-    #                     if len(command_list) > 1:
-    #                         self._commander_tcp_server.send_list(['C', command, command_list[1]])
-    #                         try:
-    #                             input("Use Ctrl+C or enter any key to end current process : ")
-    #                             self._commander_udp_client.send_list(['end'])
-    #                         except KeyboardInterrupt:
-    #                             self._commander_udp_client.send_list(['end'])
-    #                         self._commander_tcp_server.recv_list()
-    #                     else:
-    #                         print('Please specify mapid')
-
-
-    #                 ############### STM32 & XBOX ##############
-    #                 elif command == 'xs':
-    #                     self._commander_tcp_server.send_list(['C', 'xs'])
-    #                 elif command == 'si':
-    #                     self._commander_tcp_server.send_list(['C', 'si'])
-    #                     self._commander_tcp_server.recv_list()
-    #                 elif command == 'mwx':
-    #                     try:
-    #                         self._commander_tcp_server.send_list(['C', 'mwx'])
-    #                         input("Use Ctrl+C or enter any key to end current process : ")
-    #                         self._commander_udp_client.send_list(['end'])
-    #                     except KeyboardInterrupt:
-    #                         print('KeyboardInterrupt')
-    #                         self._commander_udp_client.send_list(['end'])
-    #                         time.sleep(0.5)
-    #                     self._commander_tcp_server.recv_list()
-    #                 elif command == 'stop':
-    #                     self._commander_tcp_server.send_list(['C', 'stop'])
-    #                 elif command == 'xi':
-    #                     self._commander_tcp_server.send_list(['C', 'xi'])
-    #                     self._commander_tcp_server.recv_list()
-
-    #             time.sleep(0.1)
-    #         except KeyboardInterrupt:
-    #             print('Keyboard Interrupt')
-    #             self.commander_run = False
-    #         except IndexError:
-    #             pass
-    #         except:
-    #             self.commander_run = False
-    #             print('\nError From Commander\n')
-    #             traceback.print_exc()
 
 
 if __name__ == "__main__":
