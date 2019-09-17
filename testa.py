@@ -191,31 +191,36 @@ except:
 # end_time = time.time()
 # print('Second : {}'.format(end_time - start_time))
 
-import time
-class classB():
-    def __init__(self,a=1, b=10, t = None):
-        self.a = a
-        self.b = b
-        self.t = t
+# import time
+# class classB():
+#     def __init__(self,a=1, b=10, t = None):
+#         self.a = a
+#         self.b = b
+#         self.t = t
 
-    def dic(self):
-        return {1:self.b1, 2:222, 3:self.a}
+#     def dic(self):
+#         return {1:self.b1, 2:222, 3:self.a}
 
-    def b1(self):
-        self.t.sleep(3)
-        print('b1')
+#     def b1(self):
+#         self.t.sleep(3)
+#         print('b1')
 
 
 
-class classA(classB):
-    def __init__(self):
-        self.a = 100
-        self.b = 200
+# class classA(classB):
+#     def __init__(self):
+#         self.a = 100
+#         self.b = 200
         
-        super().__init__(self.a, self.b, time)
-        self.d = self.dic()
+#         super().__init__(self.a, self.b, time)
+#         self.d = self.dic()
 
-    def a1(self):
-        print('a1')
+#     def a1(self):
+#         print('a1')
 
+import tcn_socket
+import time
+import matplotlib.pyplot as plt
 
+sock = tcn_socket.UDP_client(50008, 0, "192.168.5.10")
+sock.send_list([123])

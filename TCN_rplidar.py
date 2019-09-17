@@ -142,8 +142,9 @@ class Lidar():
 
         try:
             for scan in self.lidar.iter_scans():
-                self.lidar_data = scan
-                self.lidar_thread_client.send_list([self.lidar_USB_port , self.lidar_data ])
+                # self.lidar_data = scan
+                self.lidar_data = [list(scan) for scan in scan if scan[2] > 450]
+                self.lidar_thread_client.send_list([self.lidar_USB_port, self.lidar_data])
         except:
             self.reconnect()
             self.get_lidar_data()

@@ -9,7 +9,25 @@ import logging
 import xbox
 import tcn_socket
 
-class Bridge:
+class MoveAlgorithm:
+    ''' Provide different moving mode '''
+    def __init__(self, vision_status, vision_data, lidar_data, recorded_vision_coordinate):
+        self.vision_data = vision_data
+        self.vision_status = vision_status
+        self.lidar_data = lidar_data
+        self.recorded_vision_coordinate = recorded_vision_coordinate
+        self.global_obstacle = []
+
+    def algorithm_move_between_waypoints(self):
+        pass
+
+    def algorithm_get_global_obstacle(self):
+        if self.vision_status != 4:
+            pass
+
+
+
+class Bridge(MoveAlgorithm):
     '''Communication center Bridge(auto_start=True)'''
     def __init__(self, auto_start=True):
         '''If auto_start is False, program automatically run __init__ only'''
@@ -58,6 +76,7 @@ class Bridge:
         self.lidar_client_run = False
         self.lidar_thread_client_run = False
         self.lidar_thread = None
+        self.lidar_package = [self.lidar_data, self.lidar_usb_port]
 
         # STM32 inital variables
         self.stm32_server_run = False
@@ -70,6 +89,12 @@ class Bridge:
 
         # Algorithm initial variables
         self.algorithm_run = False
+        self.algorithm_server_run = False
+
+        # GUI initial variables
+        self.gui_server_run = False
+        self.gui_receive = []
+
 
         self.command_dictionary_bridge = {'exit all':self._exit_all, 'exit b':self._exit_b, 'exit l':self._exit_l, \
             'exit s':self._exit_s, 'exit v':self._exit_v, 'li':self._li, \
@@ -79,14 +104,30 @@ class Bridge:
                             'kbm':self._kbm, 'xs':self._xs, 'si':self._si, 'mwx':self._mwx, \
                                 'stop':self._stop, 'xi':self._xi, 'next':self._next}
 
+        # Inherit MoveAlgorithm
+        # super.__init__(self.vision_data, self.lidar_data, self.recorded_vision_coordinate)
+
         if self.auto_start:
             self.xbox_init()
             self.commander_init()
             self.vision_init()
             self.lidar_init()
             self.stm32_init()
-            self.commander_server.send_list(['C', 'next'])
+            self.commander_server.send_list(['C', 'next']) # Tell commander bridge is ready
             self.bridge_main()
+
+
+########### Send to GUI ##############
+    def gui_connection_init(self):
+        self.gui_udp_server = tcn_socket.UDP_server(50008, 0, "192.168.5.10")
+        self.gui_server_run = True
+
+
+    def gui_send_and_read(self):
+        while self.gui_server_run:
+            self.gui_receive = self.gui_udp_server.recv_list()
+            if self.gui_udp_server.addr is not None:
+                self.gui_udp_server.send_list_back([self.lidar_package])
 
 
 ############ XBOX initialize #########
@@ -224,14 +265,14 @@ class Bridge:
         '''Get vision data'''
         while self.vision_thread_server_run:
             self.vision_thread_server_status = self.vision_thread.is_alive()
-            vision_data = self.vision_thread_server.recv_list()
-            if vision_data is not None:
-                self.vision_x = vision_data[0]
-                self.vision_y = vision_data[1]
-                self.theta = vision_data[2]
-                self.vision_status = vision_data[3]
-                self.vision_client_run = vision_data[4]
-                self.vision_thread_client_run = vision_data[5]
+            self.vision_data = self.vision_thread_server.recv_list()
+            if self.vision_data is not None:
+                self.vision_x = self.vision_data[0]
+                self.vision_y = self.vision_data[1]
+                self.theta = self.vision_data[2]
+                self.vision_status = self.vision_data[3]
+                self.vision_client_run = self.vision_data[4]
+                self.vision_thread_client_run = self.vision_data[5]
                 time.sleep(0.1)
 
     def end_vision_server(self):
@@ -508,6 +549,7 @@ class Bridge:
 
 
 
+
     def show_vision_status(self):
         '''Show message depends on vision status'''
         if self.vision_status == 0:
@@ -662,6 +704,10 @@ class Bridge:
         self.commander_server.send_list(['C', 'next'])
     def _next(self):
         pass
+
+
+
+
 
 
 if __name__ == "__main__":
