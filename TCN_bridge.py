@@ -126,8 +126,9 @@ class Bridge(MoveAlgorithm):
     def gui_send_and_read(self):
         while self.gui_server_run:
             self.gui_receive = self.gui_udp_server.recv_list()
-            if self.gui_udp_server.addr is not None:
+            if self.gui_receive is not None:
                 self.gui_udp_server.send_list_back([self.lidar_package])
+            time.sleep(0.05)
 
 
 ############ XBOX initialize #########
@@ -273,7 +274,7 @@ class Bridge(MoveAlgorithm):
                 self.vision_status = self.vision_data[3]
                 self.vision_client_run = self.vision_data[4]
                 self.vision_thread_client_run = self.vision_data[5]
-                time.sleep(0.1)
+            time.sleep(0.1)
 
     def end_vision_server(self):
         '''End vision module system'''
@@ -340,7 +341,7 @@ class Bridge(MoveAlgorithm):
                 if temp_lidar_data is not None:
                     self.lidar_usb_port = temp_lidar_data[0]
                     self.lidar_data = temp_lidar_data[1]
-            time.sleep(0.2)
+            time.sleep(0.05)
 
     def end_lidar_server(self):
         '''End lidar system'''

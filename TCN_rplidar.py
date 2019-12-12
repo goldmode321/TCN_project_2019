@@ -19,15 +19,20 @@ class Lidar():
         self.lidar_thread_client = None
         self.lidar_run_flag = False
         self.lidar_data = []
+        self.lidar_connect = False
         ###############
         try:
             logging.info("Initializing Lidar_client")
             self.lidar_client = tcn_socket.TCP_client(50004)
             self.lidar_thread_client = tcn_socket.UDP_client(50005)
             self.lidar_scan_port()
-            self.lidar_client.send_list(['L', 'status', str(self.lidar_state[0])])
-            self.lidar_run_flag = True
-            self.lidar_main()
+            if self.lidar_connect:
+                self.lidar_client.send_list(['L', 'status', str(self.lidar_state[0])])
+                self.lidar_run_flag = True
+                self.lidar_main()
+            else:
+                print(("LiDAR is not initialized"))
+                logging.info("LiDAR is not initialized")
 
 
         except:
@@ -91,6 +96,7 @@ class Lidar():
 
 
     def lidar_scan_port(self):
+        retry = 0
         self.lidar_scanning_flag = True
         self.initial_scanning_port_num = 0
         logging.info('Scanning RPLidar port')
@@ -103,6 +109,7 @@ class Lidar():
                 if self.lidar_state[0] == 'Good':
                     logging.info(self.lidar_state)
                     self.lidar_scanning_flag = False
+                    self.lidar_connect = True
                     logging.info("lidar initialize successuflly")
                 else:
                     print(self.lidar_state)
@@ -114,9 +121,13 @@ class Lidar():
                 # print("Not this one , system continue scanning")
                 logging.info('Not this one , system continue scanning')
                 self.initial_scanning_port_num += 1
-                if self.initial_scanning_port_num > 10:
-                    self.initial_scanning_port_num = 0
-                    logging.warning('Rescanning RPLiDAR port')
+                if retry < 5:
+                    if self.initial_scanning_port_num > 10:
+                        self.initial_scanning_port_num = 0
+                        retry += 1
+                        logging.warning('Rescanning RPLiDAR port')
+                else:
+                    self.lidar_scanning_flag = False
 
             except:
                 traceback.print_exc()

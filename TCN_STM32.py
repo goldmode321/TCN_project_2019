@@ -53,6 +53,7 @@ class Stm32Command():
         else:
             self.ser = serial.Serial(self.usb_full_port_path, self.baudrate, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
         self.ser.write([0xFF, 0xFE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
+        ser.write([0xFF, 0xFE, 1, 50, 0, 0, 0, 0, 0, 0, 0, 0])
 
 
     def run(self):
