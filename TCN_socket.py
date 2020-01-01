@@ -3,6 +3,7 @@ import time
 import sys
 import pickle
 import traceback
+# import dill
 #import struct
 #from multiprocessing.connection import Listener, Client
 
@@ -22,7 +23,7 @@ class UDP_server(object):
             self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             self.sock.setblocking(self.setblocking)
             self.sock.bind((self.ip, self.port))
-            print('Server initiate - '+ self.ip+ ' : '+ str(self.port))
+            # print('Server initiate - '+ self.ip+ ' : '+ str(self.port))
             # self.recv_string()
             self.server_alive = True
 
@@ -50,21 +51,11 @@ class UDP_server(object):
 
     def recv_list(self, length = 4096):
         try:
-            receive_list_flag = True
-            receive_list = []
-            while receive_list_flag:
-                try:
-                    temp_receive_list, self.addr = self.sock.recvfrom(length)
-                    receive_list.append(temp_receive_list)
-                    if sys.getsizeof(temp_receive_list) < length:
-                        receive_list_flag = False
-                except:
-                    receive_list_flag = False
-            # print(receive_list)
-            if receive_list != [b''] and receive_list != []:
-                receive_list = pickle.loads(b"".join(receive_list)) 
-                return receive_list
-        
+            receive_list, self.addr = self.sock.recvfrom(length)
+            receive_list = pickle.loads(receive_list) 
+            return receive_list
+        except OSError:
+            print("Receive buffer is not enough !!!")
         except socket.timeout: # if server didn't get any data in a period of time 
             pass               # Do nothing and pass  , the return data is 'None' 
         except KeyboardInterrupt: 
@@ -78,13 +69,49 @@ class UDP_server(object):
             self.close()
             raise KeyboardInterrupt
 
-            
+    def recv_object(self, length = 4096):
+        try:
+            receive_object, self.addr = self.sock.recvfrom(length)
+            receive_object = pickle.loads(receive_object)
+            return receive_object
+        except OSError:
+            print("Receive buffer is not enough !!!")
+        except socket.timeout: # if server didn't get any data in a period of time 
+            pass               # Do nothing and pass  , the return data is 'None' 
+        except KeyboardInterrupt: 
+            self.close() # Unbind socket from the adress
+        except:
+            traceback.print_exc()
+            self.close()
+            raise KeyboardInterrupt
+
+
+    def send_object_back(self, objects=None):
+        if objects is not None:
+            try:
+                if self.addr is None:
+                    print('UDP server needs receive from UDP client first')
+                else:
+                    self.sock.sendto(pickle.dumps(objects), self.addr)
+            except TypeError as err:
+                print(err)
+        else:
+            pass
 
     # def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
     def send_string(self, message = ''):
         ''' Send string to target port (default IP is 127.0.0.1)'''
         try:
             self.sock.sendto(message.encode('utf-8') , (self.ip, self.port) ) # Send message ( I forgot what's the return value of sendto() )
+        except:
+            self.close()
+            traceback.print_exc()
+            raise KeyboardInterrupt
+
+    def send_string_back(self, message = ''):
+        ''' Send string to client'''
+        try:
+            self.sock.sendto(message.encode('utf-8'), self.addr) # Send message ( I forgot what's the return value of sendto() )
         except:
             self.close()
             traceback.print_exc()
@@ -186,6 +213,38 @@ class UDP_client(object):
             traceback.print_exc()
             self.close()
             raise KeyboardInterrupt
+
+
+    def recv_object(self, length = 4096):
+        try:
+            receive_object = self.sock.recv(length)
+            receive_object = pickle.loads(receive_object)
+            return receive_object
+
+        except OSError:
+            print("Receive buffer is not enough !!!")
+        except socket.timeout: # if server didn't get any data in a period of time 
+            pass               # Do nothing and pass  , the return data is 'None' 
+        except KeyboardInterrupt: 
+            self.close() # Unbind socket from the adress
+        except:
+            traceback.print_exc()
+            self.close()
+
+
+
+    def send_object_back(self, objects=None):
+        if objects is not None:
+            try:
+                self.sock.sendto(pickle.dumps(objects) , (self.ip, self.port) )
+            except :
+                self.close()
+                traceback.print_exc()
+                raise KeyboardInterrupt
+        else:
+            pass
+
+
 
     def send_string(self, message = '', port=50000, ip = '127.0.0.1'):
         ''' Send string to target port (default IP is 127.0.0.1)'''

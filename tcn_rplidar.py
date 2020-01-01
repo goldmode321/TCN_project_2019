@@ -3,32 +3,23 @@ import time
 import traceback
 import logging
 import threading
-import tcn_socket
 
 
 class Lidar():
 
-
-    def __init__(self):
+    def __init__(self, SharedVariable_lidar):
         logging.basicConfig(filename='LiDAR.log', filemode='w', level=logging.INFO)
         logging.info("Initializing RPLidar")
+        self.LI = SharedVariable_lidar
+        self.init()
 
-        ###############
-        self.lidar = None
-        self.lidar_client = None
-        self.lidar_thread_client = None
-        self.lidar_run_flag = False
-        self.lidar_data = []
-        self.lidar_connect = False
-        ###############
+
+    def init(self):
         try:
             logging.info("Initializing Lidar_client")
-            self.lidar_client = tcn_socket.TCP_client(50004)
-            self.lidar_thread_client = tcn_socket.UDP_client(50005)
             self.lidar_scan_port()
-            if self.lidar_connect:
-                self.lidar_client.send_list(['L', 'status', str(self.lidar_state[0])])
-                self.lidar_run_flag = True
+            if self.LI.lidar_connect:
+                self.LI.lidar_run = True
                 self.lidar_main()
             else:
                 print(("LiDAR is not initialized"))
@@ -38,57 +29,10 @@ class Lidar():
         except:
             traceback.print_exc()
             logging.exception("Got error\n")
-            if self.lidar_client != None:
-                self.lidar_client.close()
-            if self.lidar_thread_client != None:
-                self.lidar_thread_client.close()
 
 
     def lidar_main(self):
-        self.lidar_run_background()
-        while self.lidar_run_flag:
-            try:
-                lidar_receive = self.lidar_client.recv_list()
-                logging.info("lidar received : {} ".format(lidar_receive))
-                self.lidar_protocol(lidar_receive)
-
-
-            except:
-                traceback.print_exc()
-                logging.exception('Got error : ')
-                self.lidar_run_flag = False
-
-
-
-    def lidar_protocol(self,lidar_receive):
-        try:
-            if lidar_receive[0] == 'L':
-                if lidar_receive[1] == 'exit':
-                    self.lidar_run_flag = False
-                    self.lidar_client.close()
-                    self.lidar.stop()
-
-
-                elif lidar_receive[1] == 'gld':
-                    logging.debug("lidar data {}".format( self.lidar_data))
-                    if self.lidar_data != None:
-                        self.lidar_client.send_list(['L','gld', self.lidar_data])
-                    else:
-                        self.lidar_client.send_list(['L','gld',"No lidar data"])
-
-
-            else:
-                logging.warning("Wrong portocol to Lidar communication , please check lidar_portocol or bridge protocol")
-        except:
-            logging.exception("lidar_protocol Got error : ")
-
-
-
-
-    def lidar_run_background(self):
-        thread = threading.Thread(target = self.get_lidar_data ,daemon = True)
-        thread.start()
-
+        self.LI.lidar_thread = LidarGetDataThread(self.LI)
 
 #=============================================#
 #                   Liberary                  #
@@ -97,157 +41,70 @@ class Lidar():
 
     def lidar_scan_port(self):
         retry = 0
-        self.lidar_scanning_flag = True
-        self.initial_scanning_port_num = 0
+        lidar_scanning_flag = True
+        scanning_port_nu = 0
         logging.info('Scanning RPLidar port')
-        while self.lidar_scanning_flag:
+        while lidar_scanning_flag:
             try:
-                self.lidar_USB_port = '/dev/ttyUSB'+str(self.initial_scanning_port_num)
-                logging.info('Scanning '+self.lidar_USB_port)
-                self.lidar = rplidar.RPLidar(self.lidar_USB_port)
-                self.lidar_state = self.get_status()
-                if self.lidar_state[0] == 'Good':
-                    logging.info(self.lidar_state)
-                    self.lidar_scanning_flag = False
-                    self.lidar_connect = True
+                self.LI.lidar_USB_port = '/dev/ttyUSB'+str(scanning_port_nu)
+                logging.info('Scanning : {}'.format(self.LI.lidar_USB_port))
+                self.lidar = self.LI.lidar = rplidar.RPLidar(self.LI.lidar_USB_port)
+                time.sleep(0.1)
+                self.LI.lidar_state = self.lidar.get_health()
+                if self.LI.lidar_state[0] == 'Good':
+                    logging.info(self.LI.lidar_state)
+                    lidar_scanning_flag = False
+                    self.LI.lidar_connect = True
                     logging.info("lidar initialize successuflly")
                 else:
-                    print(self.lidar_state)
+                    print(self.LI.lidar_state)
                     print('1 or more undefined problems , plase check RPLiDAR')
-                    logging.warning(str(self.lidar_state)+' ; 1 or more undefined problems , please check RPLiDAR')
+                    logging.warning(str(self.LI.lidar_state)+' ; 1 or more undefined problems , please check RPLiDAR')
 
 
             except rplidar.RPLidarException:
                 # print("Not this one , system continue scanning")
                 logging.info('Not this one , system continue scanning')
-                self.initial_scanning_port_num += 1
+                scanning_port_nu += 1
                 if retry < 5:
-                    if self.initial_scanning_port_num > 10:
-                        self.initial_scanning_port_num = 0
+                    if scanning_port_nu > 5:
+                        scanning_port_nu = 0
                         retry += 1
                         logging.warning('Rescanning RPLiDAR port')
                 else:
-                    self.lidar_scanning_flag = False
+                    lidar_scanning_flag = False
 
             except:
                 traceback.print_exc()
                 logging.exception("Got error\n")
 
-    def get_status(self):
-        return self.lidar.get_health()
-
-
-    def stop(self):
+    def end(self):
+        self.LI.lidar_run = False
+        self.LI.lidar_thread.join()
         self.lidar.stop()  
         self.lidar.disconnect()
         logging.info("RPLidar disconnect")  
 
     def reconnect(self):
         self.lidar.stop()
-        self.lidar = rplidar.RPLidar(self.lidar_USB_port)
+        self.lidar = self.LI.lidar = rplidar.RPLidar(self.LI.lidar_USB_port)
 
-    def get_lidar_object(self):
-        return self.lidar
 
-    def get_lidar_data(self):
-
+class LidarGetDataThread(threading.Thread):
+    def __init__(self,SharedVariable_lidar, daemon=True):
+        self.LI = SharedVariable_lidar
+        threading.Thread.__init__(self, daemon=daemon)
+        self.start()
+    def run(self):
         try:
-            for scan in self.lidar.iter_scans():
-                # self.lidar_data = scan
-                self.lidar_data = [list(scan) for scan in scan if scan[2] > 450]
-                self.lidar_thread_client.send_list([self.lidar_USB_port, self.lidar_data])
+            for scan in self.LI.lidar.iter_scans():
+                self.LI.lidar_data = [list(i) for i in scan if i[2] > 450]
+
+                if not self.LI.lidar_run:
+                    time.sleep(0.1)
+                    raise KeyboardInterrupt
+
         except:
-            self.reconnect()
-            self.get_lidar_data()
-
-
-
-class LidarTestCommunication():
-
-
-    def __init__(self):
-        try:
-            self.lidar_data = []
-            self.lidar_receive = []
-            self.lidar_server_run_flag = False
-            self.lidar_thread_server_run_flag = False
-            time.sleep(0.2) # Make sure server initialize first
-            self.lidar_server = tcn_socket.TCP_server(50004,1)
-            self.lidar_thread_server = tcn_socket.UDP_server(50005)
-            self.lidar_receive = self.lidar_server.recv_list()
-            if self.lidar_receive == ['L','status','Good']:
-                print('Lidar connected')
-                self.lidar_server_run_flag = True
-                self.lidar_thread_server_run_flag = True
-                self.main()
-            else:
-                print('Undefined communication error of Vision module, please check test message')
-                raise KeyboardInterrupt
-        except:
-            traceback.print_exc()
-            self.lidar_server.close()
-
-
-    def main(self):
-        self.server_run_background()
-        while self.lidar_server_run_flag:
-            try:
-                command = input('Server command : ')
-                self.potorcol(command)
-            except:
-                self.potorcol('exit')
-                self.lidar_server_run_flag = False
-
-        self.lidar_server.close()
-        self.lidar_thread_server.close()
-
-
-    def get_lidar_data_background(self):
-        while self.lidar_thread_server_run_flag:
-            if self.lidar_thread_server.server_alive:
-                temp_lidar_data = self.lidar_thread_server.recv_list(65536)
-                if temp_lidar_data:
-                    self.LIDAR_USB_PORT = temp_lidar_data[0]
-                    self.lidar_data = temp_lidar_data[1]
-            time.sleep(0.2)
-
-    def server_run_background(self):
-        thread = threading.Thread(target=self.get_lidar_data_background, daemon=True)
-        thread.start()
-
-
-    def potorcol(self, command):
-        try:
-            if command == None:
-                print('socket got problem')
-
-
-
-            elif command == 'gld':
-                self.lidar_server.send_list(['L','gld'])
-                receive = self.lidar_server.recv_list()
-                print(receive[2])
-
-
-            elif command == 'gld2':
-                print(self.lidar_data)
-
-
-            elif command == 'exit':
-                self.lidar_server.send_list(['L','exit'])
-                self.lidar_server_run_flag = False
-                self.lidar_thread_server_run_flag = False
-                time.sleep(0.2) # For sure that client close first
-                self.lidar_server.close()
-
-
-            else:
-                print('{} received . Wrong potorcol  !'.format(command))
-        except:
-            self.lidar_server.close()
-            traceback.print_exc()
-
-
-if __name__ == "__main__":
-    Lidar()
+            self.LI.lidar.stop()
+            self.LI.lidar = self.LI.lidar = rplidar.RPLidar(self.LI.lidar_USB_port)
 

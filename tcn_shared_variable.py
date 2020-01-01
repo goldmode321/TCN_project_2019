@@ -12,10 +12,17 @@ class SharedVariables():
         self.LOBS = LocalObstacle()        # 50020
         self.GOBS = GlobalObstacle()       
         self.GUI = GuiObject()
+        self.XBOX = Xbox()
 
 class Rover:
     def __init__(self):
         self.rover_run = False
+
+class Xbox:
+    def __init__(self):
+        self.max_speed = 0
+        self.xbox_on = False
+        self.xobx_thread_on = False
 
 
 class LocalObstacle:
@@ -36,7 +43,7 @@ class GlobalObstacle:
 
 class Vision:
     def __init__(self):
-        self.vision_ip = "192.168.5.101"
+        self.vision_ip = "192.168.5.100"
         self.vision_run = False
         self.reset_flag = False
         self.vision_idle = False
@@ -63,13 +70,14 @@ class Lidar:
         self.lidar_angle = [0]
         self.lidar_radius = [0]
 
+
 class MapPlotting:
     def __init__(self):
         self.arrow_x = [0]
         self.arrow_y = [0]
         self.global_map = numpy.array([])
 
-class STM32:
+class Calibration:
     def __init__(self):
         self.calibrate_x = 0
         self.calibrate_y = 0
@@ -81,16 +89,21 @@ class STM32:
         self.temp_calibrate_difference_between_lidar_and_vision = 130
         self.calibration_run = False
 
-class CarControl:
+class STM32:
     def __init__(self):
-        self.car_control_server_run = False
-        self.car_control_receive = None
-        self.car_control_previous_receive = None
-        self.car_control_state = 'stop'
-        self.car_control_forward_pwm = 410 # 403
-        self.car_control_backward_pwm = 370  # 381
-        self.car_control_stop_pwm = 400
-        self.car_control_add_speed = 1 # Speed adjust from gui
+        self.usb_port = "None"
+        self.usb_port_num = 0
+        self.usb_port_path = '/dev/ttyUSB'
+        self.baudrate = 115200
+
+        self.stm_run = False
+        self.stm_auto_detect_port = True
+        self.stm_power = False
+
+class GPIO_Pin:
+    def __init__(self):
+        self.stm_power_pin = 4
+
 
 class GuiObject:
     def __init__(self):

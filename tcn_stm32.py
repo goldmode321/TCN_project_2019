@@ -10,7 +10,7 @@ import time
 import logging
 import serial
 from tcn_gpio import Stm32Power
-import tcn_socket
+import tcn_shared_variable
 
 
 '''Initial section of STM32 '''
@@ -29,55 +29,32 @@ class Stm32Command():
     # USB_port_path = "/dev/ttyUSB"
     # baudrate = 115200
 
-
-    def __init__(self, usb_port_path="/dev/ttyUSB", auto_detect_port=True, usb_port_num=0, baudrate=115200, timeout=1):
+    def __init__(self, SharedVariable_STM):
+    # def __init__(self, usb_port_path="/dev/ttyUSB", auto_detect_port=True, usb_port_num=0, baudrate=115200, timeout=1):
         '''When "STM32_command" is called, this function automatically run'''
         # Initial parameters 
         logging.basicConfig(filename='STM32_main.log', filemode='w', level=logging.INFO)
-        self.usb_port_num = usb_port_num # Initial port to scan (0)
-        self.usb_port_path = usb_port_path # Default raspbian tty path is "/dev/ttyUSB"
-        self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num) # Full path for scanning USB
-        self.baudrate = baudrate # Baudrate for STM32 is 115200. If STM32 configuration changed, this should be change,too
-        self.timeout = timeout # How long to wait for USB responses.
-        self.stm32_run = False
-        self._pin_check = 0
-        self._stm32_client = None
-        self._stm32_thread_client = None
+        temp = tcn_shared_variable.SharedVariables()
+        self.STM = temp.STM
 
 
         # Initial process
         self.stm32_power = Stm32Power()
         self.on()
-        if auto_detect_port:
+        if self.STM.stm_auto_detect_port:
             self.auto_detect_port()
         else:
-            self.ser = serial.Serial(self.usb_full_port_path, self.baudrate, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
+            self.ser = serial.Serial(self.STM.usb_port, self.STM.baudrate, serial.EIGHTBITS, serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=1)
         self.ser.write([0xFF, 0xFE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
-        ser.write([0xFF, 0xFE, 1, 50, 0, 0, 0, 0, 0, 0, 0, 0])
+
 
 
     def run(self):
         '''Run full stm32 system'''
-        self.init_socket()
-        self.main()
-        self.end()
-        self.end_background_thread()
 
-    def init_socket(self):
-        '''Initialize communication with tcn_bridge'''
-        try:
-            time.sleep(0.2) # Make sure server initialize first
-            logging.info('Successfully connect to STM32 , port : {} \n'.format(self.usb_full_port_path))
-            self._stm32_client = tcn_socket.TCP_client(50006)
-            self._stm32_thread_client = tcn_socket.UDP_client(50007)
-            logging.info('STM32 communication established\n')
-            self._stm32_client.send_list(['S', 'next'])
-            self.stm32_run = True
-        except:
-            traceback.print_exc()
-            logging.exception("Got error\n")
-            self.end()
-            self.end_background_thread()
+        self.main()
+        self.stm32_end()
+        self.end_background_thread()
 
 
     def main(self):
@@ -92,14 +69,14 @@ class Stm32Command():
                 traceback.print_exc()
                 logging.exception("Got error \n")
                 self.stm32_run = False
-                self.end()
+                self.stm32_end()
                 self.end_background_thread()
 
 
-    def end(self):
-        ''' Close communication with bridge, turn off the power of stm32'''
-        self._stm32_client.close()
-        self.off()
+    def stm32_end(self):
+        '''just turn off the power of STM32 '''
+        print("STM32 power off, please wait 0.5 second")
+        self._pin_check = self.stm32_power.off()
         logging.info('STM32 is off \n')
 
     def end_background_thread(self):
@@ -132,16 +109,16 @@ class Stm32Command():
 
                 # It is very rare that port ID is more than 10
                 # Thus cut searching when ID is too much. (Time save)
-                if self.usb_port_num > 10:
+                if self.STM.usb_port_num > 10:
                     # print('Can not find correct port from 0~10, Please check STM32 connection or STM32 protocol !! \n')
-                    self.usb_port_num = 0
-                self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num)
+                    self.STM.usb_port_num = 0
+                self.STM.usb_port = self.STM.usb_port_path + str(self.STM.usb_port_num)
                 # Setup communication with serial port
                 # If port not found, trigger IOError
                 # If found, test protocol.
-                logging.info('Connect to' + str(self.usb_full_port_path))
-                self.ser = serial.Serial(self.usb_full_port_path, self.baudrate, serial.EIGHTBITS,\
-                     serial.PARITY_NONE, serial.STOPBITS_ONE, self.timeout)
+                logging.info('Connect to' + str(self.STM.usb_port))
+                self.ser = serial.Serial(self.STM.usb_port, self.STM.baudrate, serial.EIGHTBITS,\
+                     serial.PARITY_NONE, serial.STOPBITS_ONE, timeout=1)
                 logging.info("Number of bytes in input buffer {}".format(self.ser.in_waiting))
                 data = bytearray(self.ser.read(12))
                 logging.info('USB port return : {}'.format(data))
@@ -155,7 +132,7 @@ class Stm32Command():
                     # Scan next port in next loop
                     
                     logging.debug("Number of bytes in input buffer {}".format(self.ser.in_waiting))
-                    self.usb_port_num = self.usb_port_num + 1
+                    self.STM.usb_port_num = self.STM.usb_port_num + 1
                     # self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num) 
                     # self.ser.close()
                     self.ser.reset_input_buffer()
@@ -164,7 +141,7 @@ class Stm32Command():
         except IOError:
             # If not found, scan next port and reload this function
             # print('port not found :'+ self.USB_port_PATH)
-            self.usb_port_num = self.usb_port_num + 1
+            self.STM.usb_port_num = self.STM.usb_port_num + 1
             # self.usb_full_port_path = self.usb_port_path + str(self.usb_port_num)
             self.auto_detect_port()
         
@@ -187,10 +164,7 @@ class Stm32Command():
         '''stop motor'''
         self.ser.write([0xFF, 0xFE, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0])
 
-    def off(self):
-        '''just turn off the power of STM32 '''
-        print("STM32 power off, please wait 0.5 second")
-        self._pin_check = self.stm32_power.off()
+
 
 
     def on(self):
