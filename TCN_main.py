@@ -49,14 +49,211 @@ class Main():
         self.stm32_server_run = False
         self.stm32_receive = []
 
-        self.command_dictionary = {'cs':self._cs, 'bi':self.bridge_init, 'h':self._help}
-        self.command_dictionary_bridge_require = {'exit all':self._exit_all, 'exit b':self._exit_b, 'exit l':self._exit_l, \
-            'exit s':self._exit_s, 'exit v':self._exit_v, 'exit':self._exit, 'li':self._li, \
-                'gld':self._gld, 'vi':self._vi, 'vs':self._vs, 'sv':self._sv, 'gs':self._gs, 'al':self._al, \
-                    'cc':self._cc, 'vrs':self._vrs, 'gp c':self._gp_c, 'gp x':self._gp_x, \
-                        'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, \
-                            'kbm':self._kbm, 'xs':self._xs, 'si':self._si, 'mwx':self._mwx, \
-                                'stop':self._stop, 'xi':self._xi}
+        self.command_dictionary = {'cs':self._cs, 'h':self._help}
+
+        self.command_lidar_dictionary = {'exit l':self._exit_l,'li':self._li, 'gld':self._gld, 'next':self._next}
+
+        self.command_vision_dictionary = {'exit v':self._exit_v, 'vi':self._vi, 'vs':self._vs,\
+                  'gs':self._gs, 'al':self._al, 'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, \
+                        'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
+
+        self.command_car_control_dictionary = {'exit cc':self.end_car_control, 'cci':self.car_control_init}
+
+        if self.auto_start:
+            self.vision_init()
+            self.lidar_init()
+            self.car_control_init()
+            self.gui_connection_init()
+
+        self.main_main()
+
+
+
+###################################
+
+    # command_dictionary#
+    def _cs(self):
+        print('Commander run : {} \nCommander server run : {}'.\
+            format(self.commander_run, self.commander_tcp_server_run))
+    # def bridge_init(self):
+    #     self.bridge_init()
+    def _help(self):
+        self._help()
+
+
+    #command_lidar_dictionary#
+    def _exit_all(self):
+        self.end_main_all()
+        self.commander_run = False
+
+    def _exit_b(self):
+        self._commander_tcp_server.send_list(['C', 'exit all'])
+        print('Commander server will be close in 5 second')
+        time.sleep(5)
+        self._commander_tcp_server.close()
+        self._commander_udp_client.close()
+        self._commander_tcp_server = None
+        self.commander_tcp_server_run = False
+
+    def _exit_l(self):
+        self.end_lidar()
+
+    def _exit_s(self):
+        self._commander_tcp_server.send_list(['C', 'exit s'])
+
+    def _exit_v(self):
+        self._commander_tcp_server.send_list(['C', 'exit v'])
+
+    def _exit_x(self):
+        self._commander_tcp_server.send_list(['C', 'exit x'])
+
+    def _exit(self):
+        print("Please specify which exit command to use Ex:'exit all'")
+
+    ################ LiDAR ###############
+    def _li(self):
+        self._commander_tcp_server.send_list(['C', 'li'])
+        self._commander_tcp_server.recv_list()
+    def _gld(self):
+        self._commander_tcp_server.send_list(['C', 'gld'])
+
+    ################ Vision #############
+    def _vi(self):
+        self._commander_tcp_server.send_list(['C', 'vi'])
+        self._commander_tcp_server.recv_list()
+    def _vs(self):
+        self._commander_tcp_server.send_list(['C', 'vs'])
+    def _gs(self):
+        self._commander_tcp_server.send_list(['C', 'gs'])
+    def _al(self):
+        self._commander_tcp_server.send_list(['C', 'al'])
+    def _cc(self):
+        self._commander_tcp_server.send_list(['C', 'cc'])
+    def _sv(self):
+        self._commander_tcp_server.send_list(['C', 'sv'])
+    def _vrs(self):
+        self._commander_tcp_server.send_list(['C', 'vrs'])
+        print('Vision is reseting , please wait 7 second')
+        time.sleep(7)
+    def _gp_c(self):
+        self._commander_tcp_server.send_list(['C', 'gp c'])
+        try:
+            input("Use Ctrl+C or enter any key to end current process : ")
+            self._commander_udp_client.send_list(['end'])
+        except KeyboardInterrupt:
+            self._commander_udp_client.send_list(['end'])
+        self._commander_tcp_server.recv_list()
+    def _gp_x(self):
+        self._commander_tcp_server.send_list(['C', 'gp x'])
+        try:
+            input("Use Ctrl+C or enter any key to end current process : ")
+            self._commander_udp_client.send_list(['end'])
+        except KeyboardInterrupt:
+            self._commander_udp_client.send_list(['end'])
+        self._commander_tcp_server.recv_list()
+    def _gp_exit(self):
+        self._commander_tcp_server.send_list(['C', 'gp exit'])
+    def _gp(self):
+        self._commander_tcp_server.send_list(['C', 'gp'])
+    def _bm(self):
+        try:
+            mapid = int(input('MapID : '))
+            self._commander_tcp_server.send_list(['C', 'bm', mapid])
+            try:
+                input("Use Ctrl+C or enter any key to end current process : ")
+                self._commander_udp_client.send_list(['end'])
+            except KeyboardInterrupt:
+                self._commander_udp_client.send_list(['end'])
+            self._commander_tcp_server.recv_list()
+        except ValueError:
+            print('Please specify MapID in integer')
+        except KeyboardInterrupt:
+            print('Abort')
+    def _um(self):
+        try:
+            mapid = int(input('MapID : '))
+            self._commander_tcp_server.send_list(['C', 'um', mapid])
+            try:
+                input("Use Ctrl+C or enter any key to end current process : ")
+                self._commander_udp_client.send_list(['end'])
+            except KeyboardInterrupt:
+                self._commander_udp_client.send_list(['end'])
+            self._commander_tcp_server.recv_list()
+        except ValueError:
+            print('Please specify MapID in integer')
+        except KeyboardInterrupt:
+            print('Abort')
+    def _kbm(self):
+        try:
+            mapid = int(input('MapID : '))
+            self._commander_tcp_server.send_list(['C', 'kbm', mapid])
+            try:
+                input("Use Ctrl+C or enter any key to end current process : ")
+                self._commander_udp_client.send_list(['end'])
+            except KeyboardInterrupt:
+                self._commander_udp_client.send_list(['end'])
+            self._commander_tcp_server.recv_list()
+        except ValueError:
+            print('Please specify MapID in integer')
+        except KeyboardInterrupt:
+            print('Abort')
+
+    ############ XBOX and STM32 #################
+    def _xs(self):
+        self._commander_tcp_server.send_list(['C', 'xs'])
+    def _si(self):
+        self._commander_tcp_server.send_list(['C', 'si'])
+        self._commander_tcp_server.recv_list()
+    def _mwx(self):
+        try:
+            self._commander_tcp_server.send_list(['C', 'mwx'])
+            input("Use Ctrl+C or enter any key to end current process : ")
+            self._commander_udp_client.send_list(['end'])
+        except KeyboardInterrupt:
+            print('KeyboardInterrupt')
+            self._commander_udp_client.send_list(['end'])
+            time.sleep(0.5)
+        self._commander_tcp_server.recv_list()
+    def _stop(self):
+        self._commander_tcp_server.send_list(['C', 'stop'])
+    def _xi(self):
+        self._commander_tcp_server.send_list(['C', 'xi'])
+        self._commander_tcp_server.recv_list()
+
+
+
+
+
+############################
+    def main_main(self):
+        self.main_run = True
+        while self.main_run:
+            try:
+                command = input("\nPlease enter command , enter 'h' for _help : ")
+                logging.info('Command : %s', command)
+                if command in self.command_dictionary:
+                    self.command_dictionary[command]() # Referenced from CommanderDictionary
+                elif command in self.command_vision_dictionary:
+                    self.command_vision_dictionary[command]()
+                elif command in self.command_lidar_dictionary:
+                    self.command_lidar_dictionary[command]()
+                elif command in self.command_car_control_dictionary:
+                    self.command_car_control_dictionary[command]()
+                else:
+                    print('Unknown Command')
+                time.sleep(0.1)
+            except KeyboardInterrupt:
+                self.end_main_all()
+                self.main_run = False
+            except:
+                print('Critical error happened on Main , all programs have to be shutdown')
+                self.end_main_all()
+                print('\nError from Main : main_main \n')
+                traceback.print_exc()
+                logging.exception('Got error :')
+                self.main_run = False
+        
+
 
 
 
@@ -335,9 +532,9 @@ class Main():
 #                 traceback.print_exc()
 
 
-
 if __name__ == "__main__":
     Main()
+    # Main()
     # xbox_init()
     # commander_init()
     # main()
