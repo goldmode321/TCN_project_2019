@@ -3,7 +3,7 @@ import numpy
 
 class SharedVariables():
     def __init__(self):
-        self.ROV = Rover()                 # 50012
+        self.TCN_VEHICLE = TCN_VEHICLE()                 # 50012
         self.VI = Vision()                 # 50015
         self.LI = Lidar()                  # 50016
         self.MAP = MapPlotting()           # 50017
@@ -14,9 +14,9 @@ class SharedVariables():
         self.GUI = GuiObject()
         self.XBOX = Xbox()
 
-class Rover:
+class TCN_VEHICLE:
     def __init__(self):
-        self.rover_run = False
+        self.TCN_VEHICLE= False
 
 class Xbox:
     def __init__(self):
