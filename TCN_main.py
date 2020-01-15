@@ -131,7 +131,7 @@ class Main():
             logging.info('Initialize lidar server')
             self.lidar =  tcn_rplidar.Lidar(self.LI)
             logging.info('Lidar initiated')
-        
+          
         except:
             print('\nError form Main : lidar_init\n')
             traceback.print_exc()
