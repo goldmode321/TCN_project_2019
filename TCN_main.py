@@ -9,6 +9,9 @@ import logging
 import tcn_shared_variable
 import TCN_socket
 
+import tcn_rplidar
+import tcn_vision
+
 class Main():
 
     def __init__(self, auto_start=True):
@@ -49,7 +52,7 @@ class Main():
         self.stm32_server_run = False
         self.stm32_receive = []
 
-        self.command_dictionary = {'cs':self._cs, 'h':self._help}
+        self.command_dictionary = {'cs':self._cs, 'h':self._help ,'exit all':self._exit_all}
 
         self.command_lidar_dictionary = {'exit l':self._exit_l,'li':self._li, 'gld':self._gld, 'next':self._next}
 
@@ -71,154 +74,91 @@ class Main():
 
 ###################################
 
-    # command_dictionary#
+    ### command_dictionary###
     def _cs(self):
         print('Commander run : {} \nCommander server run : {}'.\
             format(self.commander_run, self.commander_tcp_server_run))
-    # def bridge_init(self):
+    # def bridge_init(self): 
     #     self.bridge_init()
     def _help(self):
         self._help()
 
 
-    #command_lidar_dictionary#
     def _exit_all(self):
         self.end_main_all()
         self.commander_run = False
 
-    def _exit_b(self):
-        self._commander_tcp_server.send_list(['C', 'exit all'])
-        print('Commander server will be close in 5 second')
-        time.sleep(5)
-        self._commander_tcp_server.close()
-        self._commander_udp_client.close()
-        self._commander_tcp_server = None
-        self.commander_tcp_server_run = False
+    ###lidar dictionary###
 
     def _exit_l(self):
         self.end_lidar()
 
-    def _exit_s(self):
-        self._commander_tcp_server.send_list(['C', 'exit s'])
-
-    def _exit_v(self):
-        self._commander_tcp_server.send_list(['C', 'exit v'])
-
-    def _exit_x(self):
-        self._commander_tcp_server.send_list(['C', 'exit x'])
-
-    def _exit(self):
-        print("Please specify which exit command to use Ex:'exit all'")
-
-    ################ LiDAR ###############
     def _li(self):
-        self._commander_tcp_server.send_list(['C', 'li'])
-        self._commander_tcp_server.recv_list()
-    def _gld(self):
-        self._commander_tcp_server.send_list(['C', 'gld'])
+        if not self.LI.lidar_run:
+            self.lidar_init()
+        else:
+            print('LiDAR run already')
 
-    ################ Vision #############
-    def _vi(self):
-        self._commander_tcp_server.send_list(['C', 'vi'])
-        self._commander_tcp_server.recv_list()
-    def _vs(self):
-        self._commander_tcp_server.send_list(['C', 'vs'])
-    def _gs(self):
-        self._commander_tcp_server.send_list(['C', 'gs'])
-    def _al(self):
-        self._commander_tcp_server.send_list(['C', 'al'])
-    def _cc(self):
-        self._commander_tcp_server.send_list(['C', 'cc'])
-    def _sv(self):
-        self._commander_tcp_server.send_list(['C', 'sv'])
-    def _vrs(self):
-        self._commander_tcp_server.send_list(['C', 'vrs'])
-        print('Vision is reseting , please wait 7 second')
-        time.sleep(7)
-    def _gp_c(self):
-        self._commander_tcp_server.send_list(['C', 'gp c'])
+    def _gld(self):
+        print(self.LI.lidar_data)
+
+    def _next(self):
+        pass
+
+    ###STM32 dictionary###
+    def _exit_s(self):
+        self.end_stm32()
+
+    # def _exit_v(self):
+    #     self._commander_tcp_server.send_list(['C', 'exit v'])
+
+    # def _exit_x(self):
+    #     self._commander_tcp_server.send_list(['C', 'exit x'])
+
+    # def _exit(self):
+    #     print("Please specify which exit command to use Ex:'exit all'")
+
+
+    ###vision dictionary###
+    def _exit_v(self):
+        self.end_vision()
+
+
+
+    ### LiDAR ###
+    def lidar_init(self):
         try:
-            input("Use Ctrl+C or enter any key to end current process : ")
-            self._commander_udp_client.send_list(['end'])
-        except KeyboardInterrupt:
-            self._commander_udp_client.send_list(['end'])
-        self._commander_tcp_server.recv_list()
-    def _gp_x(self):
-        self._commander_tcp_server.send_list(['C', 'gp x'])
-        try:
-            input("Use Ctrl+C or enter any key to end current process : ")
-            self._commander_udp_client.send_list(['end'])
-        except KeyboardInterrupt:
-            self._commander_udp_client.send_list(['end'])
-        self._commander_tcp_server.recv_list()
-    def _gp_exit(self):
-        self._commander_tcp_server.send_list(['C', 'gp exit'])
-    def _gp(self):
-        self._commander_tcp_server.send_list(['C', 'gp'])
-    def _bm(self):
-        try:
-            mapid = int(input('MapID : '))
-            self._commander_tcp_server.send_list(['C', 'bm', mapid])
-            try:
-                input("Use Ctrl+C or enter any key to end current process : ")
-                self._commander_udp_client.send_list(['end'])
-            except KeyboardInterrupt:
-                self._commander_udp_client.send_list(['end'])
-            self._commander_tcp_server.recv_list()
-        except ValueError:
-            print('Please specify MapID in integer')
-        except KeyboardInterrupt:
-            print('Abort')
-    def _um(self):
-        try:
-            mapid = int(input('MapID : '))
-            self._commander_tcp_server.send_list(['C', 'um', mapid])
-            try:
-                input("Use Ctrl+C or enter any key to end current process : ")
-                self._commander_udp_client.send_list(['end'])
-            except KeyboardInterrupt:
-                self._commander_udp_client.send_list(['end'])
-            self._commander_tcp_server.recv_list()
-        except ValueError:
-            print('Please specify MapID in integer')
-        except KeyboardInterrupt:
-            print('Abort')
-    def _kbm(self):
-        try:
-            mapid = int(input('MapID : '))
-            self._commander_tcp_server.send_list(['C', 'kbm', mapid])
-            try:
-                input("Use Ctrl+C or enter any key to end current process : ")
-                self._commander_udp_client.send_list(['end'])
-            except KeyboardInterrupt:
-                self._commander_udp_client.send_list(['end'])
-            self._commander_tcp_server.recv_list()
-        except ValueError:
-            print('Please specify MapID in integer')
-        except KeyboardInterrupt:
-            print('Abort')
+            logging.info('Initialize lidar server')
+            self.lidar =  tcn_rplidar.Lidar(self.LI)
+            logging.info('Lidar initiated')
+        
+        except:
+            print('\nError form Main : lidar_init\n')
+            traceback.print_exc()
+            logging.info('Main initializing fail at lidar_init()\n')
+            logging.exception("Main initializing fail at lidar_init() : \n")          
+
+
+    def end_lidar(self):
+        if self.LI.lidar_run:
+            self.lidar.end()
+            logging.info("LiDAR end")
+        else:
+            print("LiDAR aleardy off")
+
+
+    ###vision###
+    def end_vision(self):
+        if  self.VI.vision_run:
+            self.tcn_vision.end()
 
     ############ XBOX and STM32 #################
-    def _xs(self):
-        self._commander_tcp_server.send_list(['C', 'xs'])
-    def _si(self):
-        self._commander_tcp_server.send_list(['C', 'si'])
-        self._commander_tcp_server.recv_list()
-    def _mwx(self):
-        try:
-            self._commander_tcp_server.send_list(['C', 'mwx'])
-            input("Use Ctrl+C or enter any key to end current process : ")
-            self._commander_udp_client.send_list(['end'])
-        except KeyboardInterrupt:
-            print('KeyboardInterrupt')
-            self._commander_udp_client.send_list(['end'])
-            time.sleep(0.5)
-        self._commander_tcp_server.recv_list()
-    def _stop(self):
-        self._commander_tcp_server.send_list(['C', 'stop'])
-    def _xi(self):
-        self._commander_tcp_server.send_list(['C', 'xi'])
-        self._commander_tcp_server.recv_list()
+    def end_stm32(self):
+        if self.STM.run:
+            self.STM.end_stm32()
+        else:
+            print('stm32 had stopped')
+    
 
 
 
