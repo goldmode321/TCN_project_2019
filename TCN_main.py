@@ -56,6 +56,9 @@ class Main():
 
         self.command_lidar_dictionary = {'exit l':self._exit_l,'li':self._li, 'gld':self._gld, 'next':self._next}
 
+        # self.command_vision_dictionary = {'exit v':self._exit_v, 'vi':self._vi, 'vs':self._vs,\
+        #           'gs':self._gs, 'al':self._al, 'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, \
+        #                 'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
         self.command_vision_dictionary = {'exit v':self._exit_v, 'vi':self._vi, 'vs':self._vs,\
                   'gs':self._gs, 'al':self._al, 'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, \
                         'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
@@ -122,6 +125,9 @@ class Main():
     ###vision dictionary###
     def _exit_v(self):
         self.end_vision()
+    
+    def _exit_vi(self):
+        self.vision_init()
 
 
 
@@ -131,7 +137,7 @@ class Main():
             logging.info('Initialize lidar server')
             self.lidar =  tcn_rplidar.Lidar(self.LI)
             logging.info('Lidar initiated')
-          
+        
         except:
             print('\nError form Main : lidar_init\n')
             traceback.print_exc()
@@ -147,10 +153,23 @@ class Main():
             print("LiDAR aleardy off")
 
 
-    ###vision###
+###vision###
     def end_vision(self):
         if  self.VI.vision_run:
             self.tcn_vision.end()
+
+            
+    def vision_init(self):
+        
+        try:
+            logging.info("Initialize vision server\n")
+            self.vision = tcn_vision.Vision(self.VI)
+            logging.exception("Vision initiated")
+        except:
+            print("\nError from Main :vision_init \n")
+            traceback.print_exc()
+            logging.info('Main initializing fail at vision_init()\n')
+            logging.exception('Got error : \n')
 
     ############ XBOX and STM32 #################
     def end_stm32(self):
