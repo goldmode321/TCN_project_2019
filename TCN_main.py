@@ -191,6 +191,7 @@ class Main():
             self.STM.stm_init()
         else:
             print('STM32 initiated')
+    
 
 
 
