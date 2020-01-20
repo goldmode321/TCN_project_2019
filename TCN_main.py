@@ -54,16 +54,21 @@ class Main():
 
         self.command_dictionary = {'cs':self._cs, 'h':self._help ,'exit all':self._exit_all}
 
-        self.command_lidar_dictionary = {'exit l':self._exit_l,'li':self._li, 'gld':self._gld, 'next':self._next}
+        self.command_lidar_dictionary = {'lid_end':self._exit_l,'lid_in':self._li, 'lid_gld':self._gld, 'lid_next':self._next}
 
         # self.command_vision_dictionary = {'exit v':self._exit_v, 'vi':self._vi, 'vs':self._vs,\
         #           'gs':self._gs, 'al':self._al, 'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, \
         #                 'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
-        self.command_vision_dictionary = {'exit v':self._exit_v, 'vi':self._vi, 'vs':self._vs,\
-                  'gs':self._gs, 'al':self._al, 'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, \
-                        'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
+        # self.command_vision_dictionary = {'exit v':self._exit_v, 'vi':self._vi, 'vs':self._vs,\
+        #           'gs':self._gs, 'al':self._al, 'cc':self._cc, 'sv':self._sv, 'vrs':self._vrs, 'gp c':self._gp_c, \
+        #                 'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
 
-        self.command_car_control_dictionary = {'exit cc':self.end_car_control, 'cci':self.car_control_init}
+
+        self.command_vision_dictionary = {'vis_in':self.vision_init,'vis_end':self.vision_end}
+        # self.command_vision_dictionary = {'vis_init':self.vision_init,'vis_end':self.vision_end,'vis_al':self.vision_alive,'vis_gp':self.vision_get_pose,\
+        #                                   'vis_gs':self.vision_get_status,'vis_sa':self.vision_save,'vis_re':self.vision_reset,'vis_bm':vision_build_map,'vis_um':vision_use_map}
+
+        self.command_xbox_stm32_dictionary = {'stm_in':self.stm32_init,'stm_end':self.stm32_end,'xbo_in':self.xbox_init}
 
         if self.auto_start:
             self.vision_init()
@@ -154,9 +159,10 @@ class Main():
 
 
 ###vision###
-    def end_vision(self):
+    def vision_end(self):
         if  self.VI.vision_run:
             self.tcn_vision.end()
+            logging.info('Vision end')
 
             
     def vision_init(self):
@@ -171,19 +177,29 @@ class Main():
             logging.info('Main initializing fail at vision_init()\n')
             logging.exception('Got error : \n')
 
-    ############ XBOX and STM32 #################
-    def end_stm32(self):
+
+
+############ XBOX and STM32 #################
+    def stm32_end(self):
         if self.STM.run:
-            self.STM.end_stm32()
+            self.STM.stm_init()
         else:
-            print('stm32 had stopped')
+            print('STM32 had stopped')
     
+    def stm32_init(self):
+        if not self.STM.run:
+            self.STM.stm_init()
+        else:
+            print('STM32 initiated')
 
 
 
-####ssss
+####stm32#####
+    def stm32_init(self):
 
-############################
+
+
+###main_main###
     def main_main(self):
         self.main_run = True
         while self.main_run:
