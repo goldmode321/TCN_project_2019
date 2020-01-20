@@ -193,7 +193,7 @@ class Main():
         else:
             print('STM32 initiated')
     
-
+    def stm 
 
 
 ####stm32#####
