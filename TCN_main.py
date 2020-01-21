@@ -69,13 +69,13 @@ class Main():
         # self.command_vision_dictionary = {'vis_init':self.vision_init,'vis_end':self.vision_end,'vis_al':self.vision_alive,'vis_gp':self.vision_get_pose,\
         #                                   'vis_gs':self.vision_get_status,'vis_sa':self.vision_save,'vis_re':self.vision_reset,'vis_bm':vision_build_map,'vis_um':vision_use_map}
 
-        self.command_xbox_stm32_dictionary = {'stm_in':self.stm32_init,'stm_end':self.stm32_end,'xbo_in':self.xbox_init}
+        self.command_xbox_stm32_dictionary = {'stm_in':self.stm32_init,'stm_end':self.stm32_end}
 
         if self.auto_start:
             self.vision_init()
             self.lidar_init()
-            self.car_control_init()
-            self.gui_connection_init()
+            self.stm32_init()
+            # self.gui_connection_init()
 
         self.main_main()
 
@@ -115,7 +115,7 @@ class Main():
         pass
 
     ###STM32 dictionary###
-    def _exit_s(self):
+    def stm_end(self):
         self.end_stm32()
 
     # def _exit_v(self):
@@ -126,15 +126,6 @@ class Main():
 
     # def _exit(self):
     #     print("Please specify which exit command to use Ex:'exit all'")
-
-
-    ###vision dictionary###
-    def _exit_v(self):
-        self.end_vision()
-    
-    def _exit_vi(self):
-        self.vision_init()
-
 
 
     ### LiDAR ###
@@ -177,7 +168,7 @@ class Main():
             traceback.print_exc()
             logging.info('Main initializing fail at vision_init()\n')
             logging.exception('Got error : \n')
-
+    
 
 
 ############ XBOX and STM32 #################
@@ -192,12 +183,9 @@ class Main():
             self.STM.stm_init()
         else:
             print('STM32 initiated')
-    
-    def stm 
 
 
-####stm32#####
-    def stm32_init(self):
+
 
 
 
