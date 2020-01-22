@@ -12,6 +12,7 @@ import TCN_socket
 import tcn_rplidar
 import tcn_vision
 import TCN_xbox
+# import tcn_stm32
 
 class Main():
 
@@ -69,12 +70,12 @@ class Main():
         # self.command_vision_dictionary = {'vis_init':self.vision_init,'vis_end':self.vision_end,'vis_al':self.vision_alive,'vis_gp':self.vision_get_pose,\
         #                                   'vis_gs':self.vision_get_status,'vis_sa':self.vision_save,'vis_re':self.vision_reset,'vis_bm':vision_build_map,'vis_um':vision_use_map}
 
-        self.command_xbox_stm32_dictionary = {'stm_in':self.stm32_init,'stm_end':self.stm32_end}
+        self.command_xbox_stm32_dictionary = {'stm_in':self.stm_init,'stm_end':self.stm_end}
 
         if self.auto_start:
             self.vision_init()
             self.lidar_init()
-            self.stm32_init()
+            # self.stm32_init()
             # self.gui_connection_init()
 
         self.main_main()
@@ -97,10 +98,17 @@ class Main():
         self.end_main_all()
         self.commander_run = False
 
+
+    def end_main_all(self):
+        self.stm_end()
+        self.vision_end()
+        self.lidar_end()
+
+
     ###lidar dictionary###
 
     def _exit_l(self):
-        self.end_lidar()
+        self.lidar_end()
 
     def _li(self):
         if not self.LI.lidar_run:
@@ -115,8 +123,19 @@ class Main():
         pass
 
     ###STM32 dictionary###
+############ XBOX and STM32 #################
     def stm_end(self):
-        self.end_stm32()
+        self.stm =tcn_stm32.Stm32Command(self.STM)
+        if self.STM.stm_run:
+            self.stm.stm32_end()
+        else:
+            print('STM32 had stopped')
+    
+    def stm_init(self):
+        if not self.STM.stm_run:
+            self.stm.stm32_run()
+        else:
+            print('STM32 initiated')
 
     # def _exit_v(self):
     #     self._commander_tcp_server.send_list(['C', 'exit v'])
@@ -142,7 +161,7 @@ class Main():
             logging.exception("Main initializing fail at lidar_init() : \n")          
 
 
-    def end_lidar(self):
+    def lidar_end(self):
         if self.LI.lidar_run:
             self.lidar.end()
             logging.info("LiDAR end")
@@ -169,20 +188,6 @@ class Main():
             logging.info('Main initializing fail at vision_init()\n')
             logging.exception('Got error : \n')
     
-
-
-############ XBOX and STM32 #################
-    def stm32_end(self):
-        if self.STM.run:
-            self.STM.stm_init()
-        else:
-            print('STM32 had stopped')
-    
-    def stm32_init(self):
-        if not self.STM.run:
-            self.STM.stm_init()
-        else:
-            print('STM32 initiated')
 
 
 
@@ -499,7 +504,6 @@ class Main():
 
 if __name__ == "__main__":
     Main()
-    # Main()
     # xbox_init()
     # commander_init()
     # main()
