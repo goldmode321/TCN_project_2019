@@ -54,7 +54,7 @@ class Main():
         self.stm32_server_run = False
         self.stm32_receive = []
 
-        self.command_dictionary = {'cs':self._cs, 'h':self._help ,'exit all':self._exit_all}
+        self.command_dictionary = {'h':self._help ,'exit all':self._exit_all}
 
         self.command_lidar_dictionary = {'lid_end':self._exit_l,'lid_in':self._li, 'lid_gld':self._gld, 'lid_next':self._next}
 
@@ -66,7 +66,7 @@ class Main():
         #                 'gp exit':self._gp_exit, 'gp':self._gp, 'bm':self._bm, 'um':self._um, 'next':self._next}
 
 
-        self.command_vision_dictionary = {'vis_in':self.vision_init,'vis_end':self.vision_end}
+        self.command_vision_dictionary = {'vis_in':self.vision_init,'vis_end':self.vision_end,'vis_data':self.show_vision_data,'vis_al':self.vision_alive}
         # self.command_vision_dictionary = {'vis_init':self.vision_init,'vis_end':self.vision_end,'vis_al':self.vision_alive,'vis_gp':self.vision_get_pose,\
         #                                   'vis_gs':self.vision_get_status,'vis_sa':self.vision_save,'vis_re':self.vision_reset,'vis_bm':vision_build_map,'vis_um':vision_use_map}
 
@@ -75,7 +75,7 @@ class Main():
         if self.auto_start:
             self.vision_init()
             self.lidar_init()
-            # self.stm32_init()
+            self.stm32_init()
             # self.gui_connection_init()
 
         self.main_main()
@@ -85,9 +85,9 @@ class Main():
 ###################################
 
     ### command_dictionary###
-    def _cs(self):
-        print('Commander run : {} \nCommander server run : {}'.\
-            format(self.commander_run, self.commander_tcp_server_run))
+    # def _cs(self):
+    #     print('Commander run : {} \nCommander server run : {}'.\
+    #         format(self.commander_run, self.commander_tcp_server_run))
     # def bridge_init(self): 
     #     self.bridge_init()
     def _help(self):
@@ -137,15 +137,6 @@ class Main():
         else:
             print('STM32 initiated')
 
-    # def _exit_v(self):
-    #     self._commander_tcp_server.send_list(['C', 'exit v'])
-
-    # def _exit_x(self):
-    #     self._commander_tcp_server.send_list(['C', 'exit x'])
-
-    # def _exit(self):
-    #     print("Please specify which exit command to use Ex:'exit all'")
-
 
     ### LiDAR ###
     def lidar_init(self):
@@ -168,12 +159,15 @@ class Main():
         else:
             print("LiDAR aleardy off")
 
-
+    def lidar_healthy(self):
+        
 ###vision###
     def vision_end(self):
         if  self.VI.vision_run:
-            self.tcn_vision.end()
+            self.vision.end()
             logging.info('Vision end')
+        else:
+             print("Vision already off")
 
             
     def vision_init(self):
@@ -189,8 +183,44 @@ class Main():
             logging.exception('Got error : \n')
     
 
+    def show_vision_data(self):
+        self.main_vision_data_run = True
+        while self.main_vision_data_run:
+            try:
+
+                print('status : {} | x : {} | y : {} | theta : {} | Use Ctrl+C or enter any key to end current process : '\
+                    .format(self.VI.vision_status, self.VI.vision_x, self.VI.vision_y, self.VI.vision_theta))
+                time.sleep(0.1)
+
+            except:
+                print('\nError from Main : main_send_vision_data_to_commander\n')
+                traceback.print_exc()
+                logging.exception("Got error:")
 
 
+    def show_vision_status(self):
+        '''Show message depends on vision status'''
+        if self.VI.vision_status == 0:
+            print("Vision module status : {} | Vision module is booting".format(self.VI.vision_status))
+        elif self.VI.vision_status == 1:
+            print("Vision module status : {} | Vision module is waiting for 'st $mapid' command".format(self.VI.vision_status))
+        elif self.VI.vision_status == 2:
+            print("Vision module status : {} | Vision module is loading data ".format(self.VI.vision_status))
+        elif self.VI.vision_status == 3:
+            print('Vision module status : {} | Please move slowly, fp-slam is searching a set of best images to initialize'.format(self.VI.vision_status))
+        elif self.VI.vision_status == 4:
+            print('Vision module status : {} | System is working normaaly'.format(self.VI.vision_status))
+        elif self.VI.vision_status == 5:
+            print('Vision module status : {} | Lost Lost Lost'.format(self.VI.vision_status))
+        else:
+            print('Unknown status code : {}'.format(self.VI.vision_status))
+
+    def vision_alive(self):
+        try:
+            self.vision.alive()        
+        except:
+            print("error from main_vision")
+            logging.exception("vision error")
 
 
 
@@ -222,8 +252,12 @@ class Main():
                 traceback.print_exc()
                 logging.exception('Got error :')
                 self.main_run = False
-        
 
+
+
+
+
+            
 
 
 
