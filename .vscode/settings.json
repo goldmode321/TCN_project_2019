@@ -1,5 +1,5 @@
 {
-    "python.pythonPath": "C:\\Users\\junfu\\AppData\\Local\\Continuum\\anaconda3\\python.exe",
+    "python.pythonPath": "H:\\conda\\python.exe",
     "python.linting.pylintEnabled": true,
     "python.linting.enabled": true
 }
