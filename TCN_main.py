@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 ''' tcn_main is the user controller, it is called 'commander' in the system '''
-
-
 import time
 import subprocess
 import traceback
@@ -10,7 +8,7 @@ import tcn_shared_variable
 import TCN_socket
 
 import tcn_rplidar
-import tcn_vision
+# import tcn_vision
 import TCN_xbox
 # import tcn_stm32
 
@@ -70,12 +68,12 @@ class Main():
         # self.command_vision_dictionary = {'vis_init':self.vision_init,'vis_end':self.vision_end,'vis_al':self.vision_alive,'vis_gp':self.vision_get_pose,\
         #                                   'vis_gs':self.vision_get_status,'vis_sa':self.vision_save,'vis_re':self.vision_reset,'vis_bm':vision_build_map,'vis_um':vision_use_map}
 
-        self.command_xbox_stm32_dictionary = {'stm_in':self.stm_init,'stm_end':self.stm_end}
+        # self.command_xbox_stm32_dictionary = {'stm_in':self.stm_init,'stm_end':self.stm_end}
 
         if self.auto_start:
-            self.vision_init()
+            # self.vision_init()
             self.lidar_init()
-            self.stm32_init()
+            # self.stm32_init()
             # self.gui_connection_init()
 
         self.main_main()
@@ -91,7 +89,36 @@ class Main():
     # def bridge_init(self): 
     #     self.bridge_init()
     def _help(self):
-        self._help()
+        #         ''' Help manmual'''
+        print('\nCommander relative\n')
+        print("cs : Check for commander status")
+        print("exit all : Close all process")
+
+        print("\nLiDAR relative\n")
+        print("lid_gld : Show instant LiDAR data")
+        print("lid_in : Initialize LiDAR")
+        print("lid_end : Close LiDAR ")
+
+        print("\nVision relative\n")
+        print("gs : Get vision module status")
+        print("gp : Show vision data")
+        print("gp c : Continuous show vision data")
+        print("gp x : Contunuous show vision data, with XBOX control")
+        print("vs : Vision status")
+        print("vis_in : Initialize Vision")
+        print("vis_end : Close vision")
+
+        print("\nSTM32 relative\n")
+        print("si : Initialize STM32")
+        print("exit s : Close STM32")
+        print("stop : stop motor")
+
+        print("\nXBOX relative\n")
+        print("mwx : Enable xbox control")
+        print("xi : Initialize xbox ")
+        print("xs : Show xbox status")
+        print("exit x : Close xbox")
+        
 
 
     def _exit_all(self):
@@ -100,7 +127,7 @@ class Main():
 
 
     def end_main_all(self):
-        self.stm_end()
+        # self.stm_end()
         self.vision_end()
         self.lidar_end()
 
@@ -124,18 +151,18 @@ class Main():
 
     ###STM32 dictionary###
 ############ XBOX and STM32 #################
-    def stm_end(self):
-        self.stm =tcn_stm32.Stm32Command(self.STM)
-        if self.STM.stm_run:
-            self.stm.stm32_end()
-        else:
-            print('STM32 had stopped')
+    # def stm_end(self):
+    #     self.stm =tcn_stm32.Stm32Command(self.STM)
+    #     if self.STM.stm_run:
+    #         self.stm.stm32_end()
+    #     else:
+    #         print('STM32 had stopped')
     
-    def stm_init(self):
-        if not self.STM.stm_run:
-            self.stm.stm32_run()
-        else:
-            print('STM32 initiated')
+    # def stm_init(self):
+    #     if not self.STM.stm_run:
+    #         self.stm.stm32_run()
+    #     else:
+    #         print('STM32 initiated')
 
 
     ### LiDAR ###
@@ -159,11 +186,11 @@ class Main():
         else:
             print("LiDAR aleardy off")
 
-    def lidar_healthy(self):
+    # def lidar_healthy(self):
         
 ###vision###
     def vision_end(self):
-        if  self.VI.vision_run:
+        if self.VI.vision_run:
             self.vision.end()
             logging.info('Vision end')
         else:
