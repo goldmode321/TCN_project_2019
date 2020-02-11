@@ -12,7 +12,7 @@ import TCN_socket
 import tcn_rplidar
 import tcn_vision
 import TCN_xbox
-# import tcn_stm32
+import tcn_stm32
 
 class Main():
 
@@ -73,9 +73,9 @@ class Main():
         self.command_xbox_stm32_dictionary = {'stm_in':self.stm_init,'stm_end':self.stm_end}
 
         if self.auto_start:
-            self.vision_init()
+            # self.vision_init()
             self.lidar_init()
-            self.stm32_init()
+            # self.stm32_init()
             # self.gui_connection_init()
 
         self.main_main()
@@ -91,7 +91,7 @@ class Main():
     # def bridge_init(self): 
     #     self.bridge_init()
     def _help(self):
-        self._help()
+        pass
 
 
     def _exit_all(self):
@@ -159,11 +159,11 @@ class Main():
         else:
             print("LiDAR aleardy off")
 
-    def lidar_healthy(self):
+    # def lidar_healthy(self):
         
 ###vision###
     def vision_end(self):
-        if  self.VI.vision_run:
+        if self.VI.vision_run:
             self.vision.end()
             logging.info('Vision end')
         else:

@@ -9,7 +9,7 @@ import sys
 import time
 import logging
 import serial
-from tcn_gpio import Stm32Power
+from TCN_gpio import Stm32Power
 import tcn_shared_variable
 
 
