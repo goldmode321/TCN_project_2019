@@ -94,7 +94,8 @@ class LidarGetDataThread(threading.Thread):
     def __init__(self,SharedVariable_lidar, daemon=True):
         self.LI = SharedVariable_lidar
         threading.Thread.__init__(self, daemon=daemon)
-        self.start()
+        self.run()
+
     def run(self):
         try:
             for scan in self.LI.lidar.iter_scans():
@@ -107,4 +108,4 @@ class LidarGetDataThread(threading.Thread):
         except:
             self.LI.lidar.stop()
             self.LI.lidar = self.LI.lidar = rplidar.RPLidar(self.LI.lidar_USB_port)
-
+        

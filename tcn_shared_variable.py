@@ -7,7 +7,7 @@ class SharedVariables():
         self.VI = Vision()                 # 50015
         self.LI = Lidar()                  # 50016
         self.MAP = MapPlotting()           # 50017
-        self.CAL = Calibration()           # 50018
+        self.CAL =  ()           # 50018
         self.STM = STM32()             # 50019
         self.LOBS = LocalObstacle()        # 50020
         self.GOBS = GlobalObstacle()       
@@ -66,7 +66,7 @@ class Lidar:
         self.lidar_connect = False
         self.lidar_state = list()
         self.lidar_minimum_radius = 450
-        self.lidar_data = [[0,0,0],[1,1,1]]
+        self.lidar_data = []
         self.lidar_angle = [0]
         self.lidar_radius = [0]
 
